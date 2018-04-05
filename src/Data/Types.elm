@@ -8,7 +8,7 @@ type alias Vec2 = (Float, Float)
 
 type KeyboardEvent = Up KeyCode | Down KeyCode
 
-type KeyFlag = Old | New
+type KeyFlag = Holding | Pressed
 
 type Key = Key KeyCode KeyFlag
 
