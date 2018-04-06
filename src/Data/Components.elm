@@ -1,51 +1,64 @@
 module Data.Components exposing (..)
 
 import Color exposing (Color)
-
 import Data.Types exposing (..)
 
-type Component
-    = Disabled Component
-    | PlayerController
-    | Position Point
-    | Physics Vec2 (Maybe Float)
-    | Graphic Float Float Color Int
+---- COMPONENT RECORD ----
 
-position : Component -> Bool
-position component =
-    case component of
-        (Position _) -> True
-        _ -> False
+type alias ComponentSet =
+    { playerController : Maybe PlayerController
+    , position : Maybe Position
+    , physics : Maybe Physics
+    , graphic : Maybe Graphic
+    }
 
-physics : Component -> Bool
-physics component =
-    case component of
-        (Physics _ _) -> True
-        _ -> False
+noComponents : ComponentSet
+noComponents =
+    { playerController = Nothing
+    , position = Nothing
+    , physics = Nothing
+    , graphic = Nothing
+    }
 
-graphic : Component -> Bool
-graphic component =
-    case component of
-        (Graphic _ _ _ _) -> True
-        _ -> False
+type PlayerController = PlayerController
+type Position = Position Point
+type Physics = Physics Vec2 (Maybe Float)
+type Graphic = Graphic Float Float Color Int
 
-playerController : Component -> Bool
-playerController component =
-    case component of
-        PlayerController -> True
-        _ -> False
+---- UPDATER FUNCTIONS ----
 
-getComponent : (Component -> Bool) -> List Component -> Maybe Component
-getComponent pred = List.head << List.filter pred
+playerController_ : Updater PlayerController
+playerController_ f cSet = { cSet | playerController = f cSet.playerController }
 
-updateComponent : (Component -> Bool) -> Component -> List Component -> List Component
-updateComponent pred newComponent entity =
-    newComponent :: List.filter (not << pred) entity
+position_ : Updater Position
+position_ f cSet = { cSet | position = f cSet.position }
 
-hasAllComponents : List (Component -> Bool) -> List Component -> Bool
-hasAllComponents components entity =
-    if List.length entity == 0
-        then False
-        else
-            (==) 0 <| List.length <|
-                List.filter (\pred -> not <| List.any pred entity) components
+physics_ : Updater Physics
+physics_ f cSet = { cSet | physics = f cSet.physics }
+
+graphic_ : Updater Graphic
+graphic_ f cSet = { cSet | graphic = f cSet.graphic }
+
+---- UPDATER HELPERS ----
+
+type alias Updater a = (Maybe a -> Maybe a) -> ComponentSet -> ComponentSet
+
+set : Updater a -> a -> ComponentSet -> ComponentSet
+set updater = updater << always << Just
+
+update : Updater a -> Updater a
+update = identity
+
+remove : Updater a -> ComponentSet -> ComponentSet
+remove updater = updater (always Nothing)
+
+---- MAPPING FUNCTIONS (re-exports from Maybe, in case of implementation change) ----
+
+map : (a -> b) -> Maybe a -> Maybe b
+map = Maybe.map
+
+map2 : (a -> b -> value) -> Maybe a -> Maybe b -> Maybe value
+map2 = Maybe.map2
+
+map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
+map3 = Maybe.map3

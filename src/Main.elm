@@ -4,6 +4,8 @@ import Html
 import Collage
 import Element
 import Time
+import Color
+import Dict exposing (Dict)
 
 import AnimationFrame
 import Keyboard
@@ -11,12 +13,31 @@ import Keyboard
 import Data.Model exposing (..)
 import Messages exposing (..)
 import Data.Types exposing (..)
-import Data.Components exposing (..)
+import Data.Components as Component exposing (..)
+
+addEntity : ComponentSet -> Model -> Model
+addEntity components model =
+    { model
+        | entities = Dict.insert model.cId components model.entities
+        , cId = model.cId + 1
+    }
+
+initModel : Model
+initModel =
+    empty
+        |> addEntity ( noComponents -- the player
+                        |> set playerController_ PlayerController
+                        |> set position_ (Position (0, 0))
+                        |> set physics_ (Physics (0, 0) (Just -5000))
+                        |> set graphic_ (Graphic 25 25 Color.red 1) )
+        |> addEntity ( noComponents -- ground
+                        |> set position_ (Position (0, 0))
+                        |> set graphic_ (Graphic 1000 30 Color.green -1) )
 
 main : Program Never Model Msg
 main =
     Html.program
-        { init = (empty, Cmd.none)
+        { init = (initModel, Cmd.none)
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.batch
@@ -54,9 +75,10 @@ view model =
             [ Element.toHtml <| renderSystem width height model.entities
             , Html.div [] [ Html.text <| toString model.keys ]
             , Html.div [] [ Html.text <| toString (floor <| 1000 / model.tick) ++ " fps" ]
+            , Html.div [] [ Html.text <| toString model.entities ]
             ]
 
-renderSystem : Float -> Float -> List (List Component) -> Element.Element
+renderSystem : Float -> Float -> Dict Id ComponentSet -> Element.Element
 renderSystem width height =
     let drawAt = \w h (x, y) -> Collage.move (-width/2+w/2+x, -height/2+h/2+y) --set origin to bottom left
     in
@@ -64,31 +86,26 @@ renderSystem width height =
         << List.map Tuple.second
         << List.sortBy Tuple.first
         << List.filterMap (\entity ->
-            Maybe.map2 (\p g ->
-                case (p, g) of
-                    ((Position pos), (Graphic w h color layer)) ->
-                        (layer, Collage.rect w h |> Collage.filled color |> drawAt w h pos)
-                    _ -> Debug.crash "renderSystem: Bad pattern match."
-            ) (getComponent position entity) (getComponent graphic entity)
+            Component.map2 (\(Position pos) (Graphic w h color layer) ->
+                (layer, Collage.rect w h |> Collage.filled color |> drawAt w h pos)
+            ) entity.position entity.graphic
         )
+        << Dict.values
 
-physicsSystem : Time.Time -> List (List Component) -> List (List Component)
+physicsSystem : Time.Time -> Dict Id ComponentSet -> Dict Id ComponentSet
 physicsSystem dt =
-    List.map (\entity ->
-        let applyPhysics pos phys =
-                case (pos, phys) of
-                    (Position (x, y), Physics (vx, vy) mGravity) ->
-                        let vyNew = vy + (Maybe.withDefault 0 mGravity * Time.inSeconds dt)
-                            xNew = vx * (Time.inSeconds dt) + x
-                            yNew = vyNew * (Time.inSeconds dt) + y
-                            (y_,vy_) = if yNew <= 15 then (15, 0) else (yNew, vyNew)
-                        in
-                            [ updateComponent position (Position (xNew, y_))
-                            , updateComponent physics (Physics (vx, vy_) mGravity)
-                            ]
-                    _ -> Debug.crash "physicsSystem: Bad pattern match."
+    Dict.map (\_ entity ->
+        let applyPhysics (Position (x, y)) (Physics (vx, vy) mGravity) =
+                let vyNew = vy + (Maybe.withDefault 0 mGravity * Time.inSeconds dt)
+                    xNew = vx * (Time.inSeconds dt) + x
+                    yNew = vyNew * (Time.inSeconds dt) + y
+                    (y_,vy_) = if yNew <= 15 then (15, 0) else (yNew, vyNew)
+                in
+                    [ set position_ <| Position (xNew, y_)
+                    , set physics_ <| Physics (vx, vy_) mGravity
+                    ]
         in
-            case Maybe.map2 applyPhysics (getComponent position entity) (getComponent physics entity) of
+            case Component.map2 applyPhysics entity.position entity.physics of
                 Nothing -> entity
                 Just updaters -> List.foldl (<|) entity updaters
     )
@@ -96,44 +113,40 @@ physicsSystem dt =
 matchKey : Keyboard.KeyCode -> Key -> Bool
 matchKey code (Key c _) = code == c
 
-playerControlSystem : KeyboardInputs -> List (List Component) -> List (List Component)
+playerControlSystem : KeyboardInputs -> Dict Id ComponentSet -> Dict Id ComponentSet
 playerControlSystem keys =
-    List.map (\entity ->
-        let applyControls pos phys _ =
-            case (pos, phys) of
-                (Position pos_, Physics vel mGravity) ->
-                    { position = pos_, velocity = vel }
-                    |> (\p -> -- jumping
-                        if Tuple.second p.position <= 15 && List.member (Key 38 Pressed) keys
-                            then { p | velocity = (Tuple.first p.velocity, 1500) }
-                            else p)
-                    >> (\p -> -- fast falling
-                        if Tuple.second p.position > 15 && List.member (Key 40 Pressed) keys
-                            then { p | velocity = (Tuple.first p.velocity, -1500) }
-                            else p
-                        )
-                    >> (\p -> -- horizontal movement
-                        case List.head (List.filter (\(Key n _) -> n == 37 || n == 39) keys) of
-                            Nothing -> { p | velocity = (0, Tuple.second p.velocity) }
-                            Just (Key n _) ->
-                                case n of
-                                    37 -> { p | velocity = (-750, Tuple.second p.velocity) }
-                                    39 -> { p | velocity = (750, Tuple.second p.velocity) }
-                                    _ -> p
-                        )
-                    >> (\p ->
-                        [ updateComponent position (Position p.position)
-                        , updateComponent physics (Physics p.velocity mGravity)
-                        ]
-                        )
-                _ -> Debug.crash "playerControlSystem: Bad pattern match."
+    Dict.map (\_ entity ->
+        let applyControls (Position pos_) (Physics vel mGravity) PlayerController =
+                { position = pos_, velocity = vel }
+                |> (\p -> -- jumping
+                    if Tuple.second p.position <= 15 && List.member (Key 38 Pressed) keys
+                        then { p | velocity = (Tuple.first p.velocity, 1500) }
+                        else p)
+                >> (\p -> -- fast falling
+                    if Tuple.second p.position > 15 && List.member (Key 40 Pressed) keys
+                        then { p | velocity = (Tuple.first p.velocity, -1500) }
+                        else p
+                    )
+                >> (\p -> -- horizontal movement
+                    case List.head (List.filter (\(Key n _) -> n == 37 || n == 39) keys) of
+                        Nothing -> { p | velocity = (0, Tuple.second p.velocity) }
+                        Just (Key n _) ->
+                            case n of
+                                37 -> { p | velocity = (-750, Tuple.second p.velocity) }
+                                39 -> { p | velocity = (750, Tuple.second p.velocity) }
+                                _ -> p
+                    )
+                >> (\p ->
+                    [ set position_ <| Position p.position
+                    , set physics_ <| Physics p.velocity mGravity
+                    ]
+                    )
         in
-            case Maybe.map3 applyControls (getComponent position entity) (getComponent physics entity) (getComponent playerController entity) of
+            case Component.map3 applyControls entity.position entity.physics entity.playerController of
                 Nothing -> entity
                 Just updaters ->
                     List.foldl (<|) entity updaters
     )
-
 
 keyDown : Keyboard.KeyCode -> KeyboardInputs -> Bool
 keyDown code inputs =
