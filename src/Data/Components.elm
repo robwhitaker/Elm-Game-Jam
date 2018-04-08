@@ -2,6 +2,8 @@ module Data.Components exposing (..)
 
 import Color exposing (Color)
 import Data.Types exposing (..)
+import Vector2 as V2 exposing (Float2, Vec2)
+import Vector3 as V3 exposing (Float3)
 
 ---- COMPONENT RECORD ----
 
@@ -21,9 +23,9 @@ noComponents =
     }
 
 type PlayerController = PlayerController
-type Position = Position Point
-type Physics = Physics Vec2 (Maybe Float)
-type Graphic = Graphic Float Float Color Int
+type Position = Position Float3
+type Physics = Physics (Vec2 Float) (Maybe Float)
+type Graphic = Graphic Float Float Color
 
 ---- UPDATER FUNCTIONS ----
 
@@ -62,3 +64,7 @@ map2 = Maybe.map2
 
 map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
 map3 = Maybe.map3
+
+component : b -> (a -> b) -> Maybe a -> b
+component default f =
+    Maybe.withDefault default << map f
