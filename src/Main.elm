@@ -78,7 +78,7 @@ update msg model =
                         Just player -> Maybe.withDefault (Position (0,0,0)) player.position
                 cameraPos =
                     \(x, y, _) ->
-                        (x*0.9, 300+y*0.2)
+                        (x*0.8, 300+y*0.2)
             in
                 ({model
                     | tick = dt
@@ -91,8 +91,7 @@ update msg model =
             ({ model | keys = keyboardSystem e model.keys }, Cmd.none)
         WindowResize size ->
             ({ model | windowSize = (size.width, size.height) }, Cmd.none)
-        TextureLoad resTexture ->
-            in ({ model | bgTexture = Result.toMaybe resTexture }, Cmd.none)
+        TextureLoad resTexture -> ({ model | bgTexture = Result.toMaybe resTexture }, Cmd.none)
         NoOp -> (model, Cmd.none)
 
 view : Model -> Html.Html msg
