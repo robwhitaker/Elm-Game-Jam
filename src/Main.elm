@@ -32,6 +32,19 @@ addEntity components model =
         , cId = model.cId + 1
     }
 
+makeSpritesheet : String -> String -> Dict String Animation -> Spritesheet
+makeSpritesheet filePath currentAnimation animations =
+    Spritesheet filePath Nothing animations |> setRunningAnimation currentAnimation
+
+setRunningAnimation : String -> Spritesheet -> Spritesheet
+setRunningAnimation currentAnimation (Spritesheet filePath _ animations) =
+    case Dict.get currentAnimation animations of
+        Nothing -> Spritesheet filePath Nothing animations
+        Just (Animation _ _ _ _ _ nFrames duration as animation) ->
+            Spritesheet filePath
+                        (Just <| RunningAnimation 0 (duration / toFloat nFrames) animation)
+                        animations
+
 initModel : Model
 initModel =
     empty
@@ -39,10 +52,18 @@ initModel =
                         |> set playerController_ PlayerController
                         |> set position_ (Position (0, 0, 1))
                         |> set physics_ (Physics (0, 0) (Just -5000))
-                        |> set graphic_ (Graphic 25 25 Color.red) )
+                        |> set spritesheet_
+                            (makeSpritesheet "/assets/img/temp_sprite.png" "idle"
+                                <| Dict.insert "idle" (Animation (70,100) (0,(1024-(255+67))/1024) (214/1024,(1024-255)/1024) 0 (0,0) 3 0.5) Dict.empty
+                            ) )
+                        -- |> set graphic_ (Graphic 25 25 Color.red) )
         |> addEntity ( noComponents -- ground
                         |> set position_ (Position (-5000, -975, 0))
                         |> set graphic_ (Graphic 10000 1000 Color.green) )
+
+loadTexture : String -> Cmd Msg
+loadTexture filePath = Task.attempt TextureLoad <| Task.map ((,) filePath) (Texture.load filePath)
+
 
 main : Program Never Model Msg
 main =
@@ -51,7 +72,8 @@ main =
             ( initModel
             , Cmd.batch
                 [ Task.perform WindowResize Window.size
-                , Task.attempt TextureLoad (Texture.load "/assets/img/temp_bg.png")
+                , loadTexture "/assets/img/temp_bg.png"
+                , loadTexture "/assets/img/temp_sprite.png"
                 ]
             )
         , view = view
@@ -72,6 +94,7 @@ update msg model =
                     model.entities
                         |> playerControlSystem model.keys
                         |> physicsSystem dt
+                        |> animationSystem dt
                 (Position playerPos) =
                     case Dict.get 0 newEntities of
                         Nothing -> Position (0,0,0)
@@ -91,43 +114,99 @@ update msg model =
             ({ model | keys = keyboardSystem e model.keys }, Cmd.none)
         WindowResize size ->
             ({ model | windowSize = (size.width, size.height) }, Cmd.none)
-        TextureLoad resTexture -> ({ model | bgTexture = Result.toMaybe resTexture }, Cmd.none)
+        TextureLoad resTexture ->
+            case resTexture of
+                Result.Err e ->
+                    let log = Debug.log "resourceError" (toString e)
+                    in (model, Cmd.none)
+                Result.Ok (filePath, texture) ->
+                    ({ model | resources = Dict.insert filePath texture model.resources }, Cmd.none)
         NoOp -> (model, Cmd.none)
 
 view : Model -> Html.Html msg
 view model =
     Html.div []
-        [ renderSystem model.bgTexture model.camera (Tuple.first model.windowSize) (Tuple.second model.windowSize) model.entities
+        [ renderSystem model
         -- , Html.div [] [ Html.text <| toString model.keys ]
         -- , Html.div [] [ Html.text <| toString (floor <| 1000 / model.tick) ++ " fps" ]
         -- , Html.div [] [ Html.text <| toString model.entities ]
         ]
 
-renderSystem : Maybe Texture -> Camera.Camera -> Int -> Int -> Dict Id ComponentSet -> Html.Html msg
-renderSystem bg cam width height =
-    Game.renderCenteredWithOptions [] [] { time = 0, size = (width, height), camera = cam }
+renderSystem : Model -> Html.Html msg
+renderSystem model =
+    Game.renderCenteredWithOptions [] [] { time = 0, size = model.windowSize, camera = model.camera }
     << (++)
         [ Render.parallaxScroll
             { z = -0.99
-            , texture = bg
+            , texture = Dict.get "/assets/img/temp_bg.png" model.resources
             , tileWH = (2,2)
             , scrollSpeed = (0.005, 0.005)
             }
         , Render.parallaxScroll
             { z = -0.98
-            , texture = bg
+            , texture = Dict.get "/assets/img/temp_bg.png" model.resources
             , tileWH = (1,1)
             , scrollSpeed = (0.01, 0.01)
             }
         ]
     << List.filterMap (\entity ->
-        Component.map2 (\(Position pos) (Graphic w h color) ->
-            Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) }
-        ) entity.position entity.graphic
+        let shape =
+            Component.map2 (\(Position pos) (Graphic w h color) ->
+                Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) }
+            ) entity.position entity.graphic
+        in
+            case shape of
+                Just s -> shape
+                Nothing ->
+                    Component.map2
+                        (\(Position pos) (Spritesheet texturePath maybeRunningAnimation _) ->
+                            case maybeRunningAnimation of
+                                Nothing -> Nothing
+                                Just (RunningAnimation currentFrame _
+                                        (Animation size bottomLeft topRight rotation pivot nFrames _)) ->
+                                            Just <| Render.manuallyManagedAnimatedSpriteWithOptions
+                                                { texture = Dict.get texturePath model.resources
+                                                , position = pos
+                                                , size = size
+                                                , bottomLeft = bottomLeft
+                                                , topRight = topRight
+                                                , rotation = rotation
+                                                , pivot = pivot
+                                                , numberOfFrames = nFrames
+                                                , currentFrame = currentFrame
+                                                }
+                    ) entity.position entity.spritesheet |> Maybe.withDefault Nothing
     )
     -- Render.shapeZ doesn't seem to work, so we need to sort manually
     << List.sortBy (Component.component 0 (\(Position (x,y,z)) -> z) << .position)
     << Dict.values
+    <| model.entities
+
+animationSystem : Time.Time -> Dict Id ComponentSet -> Dict Id ComponentSet
+animationSystem dt =
+    Dict.map (\_ entity ->
+        entity.spritesheet
+            |> Maybe.andThen
+                (\(Spritesheet filePath maybeRunningAnimation animations) ->
+                    maybeRunningAnimation
+            |> Maybe.andThen
+                (\(RunningAnimation currentFrame timeBeforeNextFrame
+                    (Animation _ _ _ _ _ nFrames duration as animation)) ->
+                    Component.update spritesheet_ (\_ ->
+                        let (cFrame, timeBeforeNext) =
+                            if timeBeforeNextFrame - dt <= 0
+                                then ((currentFrame + 1) % nFrames, (duration / toFloat nFrames) + (timeBeforeNextFrame - dt))
+                                else (currentFrame, timeBeforeNextFrame - dt)
+                        in
+                            Just <| Spritesheet
+                                filePath
+                                (Just <| RunningAnimation cFrame timeBeforeNext animation)
+                                animations
+                    ) entity |> Just
+                ))
+            |> Maybe.withDefault entity
+
+    )
 
 physicsSystem : Time.Time -> Dict Id ComponentSet -> Dict Id ComponentSet
 physicsSystem dt =

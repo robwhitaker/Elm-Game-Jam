@@ -12,5 +12,5 @@ type Msg
     | Tick Time
     | KeyboardEvent KeyboardEvent
     | WindowResize Size
-    | TextureLoad (Result Error Texture)
+    | TextureLoad (Result Error (String, Texture))
 

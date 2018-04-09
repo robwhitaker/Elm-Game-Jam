@@ -16,7 +16,7 @@ type alias Model =
     , cId  : Int
     , camera : Camera
     , windowSize : Vec2 Int
-    , bgTexture : Maybe Texture --TODO: better handling of textures later
+    , resources : Dict String Texture
     }
 
 empty : Model
@@ -27,5 +27,5 @@ empty =
     , cId = 0
     , camera = Camera.fixedWidth 1280 (0,0)
     , windowSize = (0, 0)
-    , bgTexture = Nothing
+    , resources = Dict.empty
     }

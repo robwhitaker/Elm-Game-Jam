@@ -2,8 +2,10 @@ module Data.Components exposing (..)
 
 import Color exposing (Color)
 import Data.Types exposing (..)
+import Time exposing (Time)
 import Vector2 as V2 exposing (Float2, Vec2)
 import Vector3 as V3 exposing (Float3)
+import Dict exposing (Dict)
 
 ---- COMPONENT RECORD ----
 
@@ -12,6 +14,7 @@ type alias ComponentSet =
     , position : Maybe Position
     , physics : Maybe Physics
     , graphic : Maybe Graphic
+    , spritesheet : Maybe Spritesheet
     }
 
 noComponents : ComponentSet
@@ -20,12 +23,17 @@ noComponents =
     , position = Nothing
     , physics = Nothing
     , graphic = Nothing
+    , spritesheet = Nothing
     }
 
 type PlayerController = PlayerController
 type Position = Position Float3
 type Physics = Physics (Vec2 Float) (Maybe Float)
 type Graphic = Graphic Float Float Color
+type Spritesheet = Spritesheet String (Maybe RunningAnimation) (Dict String Animation) -- texturePath runningAnimation animations
+
+type Animation = Animation Float2 Float2 Float2 Float Float2 Int Time -- size bottomLeft topRight rotation pivot nFrames duration
+type RunningAnimation = RunningAnimation Int Time Animation -- currentFrame timeBeforeNextFrame currentAnimation
 
 ---- UPDATER FUNCTIONS ----
 
@@ -40,6 +48,9 @@ physics_ f cSet = { cSet | physics = f cSet.physics }
 
 graphic_ : Updater Graphic
 graphic_ f cSet = { cSet | graphic = f cSet.graphic }
+
+spritesheet_ : Updater Spritesheet
+spritesheet_ f cSet = { cSet | spritesheet = f cSet.spritesheet }
 
 ---- UPDATER HELPERS ----
 
