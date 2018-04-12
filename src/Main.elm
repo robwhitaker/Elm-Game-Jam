@@ -23,43 +23,42 @@ import WebGL.Texture as Texture exposing (Texture)
 import Data.Model exposing (..)
 import Messages exposing (..)
 import Data.Types exposing (..)
-import Data.Components as Component exposing (..)
-
-addEntity : ComponentSet -> Model -> Model
-addEntity components model =
-    { model
-        | entities = Dict.insert model.cId components model.entities
-        , cId = model.cId + 1
-    }
-
-makeSpritesheet : String -> String -> Dict String Animation -> Spritesheet
-makeSpritesheet filePath currentAnimation animations =
-    Spritesheet filePath Nothing animations |> setRunningAnimation currentAnimation
-
-setRunningAnimation : String -> Spritesheet -> Spritesheet
-setRunningAnimation currentAnimation (Spritesheet filePath _ animations) =
-    case Dict.get currentAnimation animations of
-        Nothing -> Spritesheet filePath Nothing animations
-        Just (Animation _ _ _ _ _ nFrames duration as animation) ->
-            Spritesheet filePath
-                        (Just <| RunningAnimation 0 (duration / toFloat nFrames) animation)
-                        animations
+import Data.ComponentTable as Component exposing (..)
+import Data.ECS as ECS exposing (Id)
 
 initModel : Model
 initModel =
     empty
-        |> addEntity ( noComponents -- the player
-                        |> set playerController_ PlayerController
-                        |> set position_ (Position (0, 0, 1))
-                        |> set physics_ (Physics (0, 0) (Just -5000))
-                        |> set spritesheet_
+        |> ECS.addEntity ( noComponents -- the player
+                        |> ECS.set playerController_ PlayerController
+                        |> ECS.set position_ (Position (0, 0, 1))
+                        |> ECS.set physics_ (Physics (0, 0) (Just -5000))
+                        |> ECS.set spritesheet_
                             (makeSpritesheet "/assets/img/temp_sprite.png" "idle"
-                                <| Dict.insert "idle" (Animation (70,100) (0,(1024-(255+67))/1024) (214/1024,(1024-255)/1024) 0 (0,0) 3 0.5) Dict.empty
+                                <| Dict.insert "idle"
+                                    { size = (70,100)
+                                    , bottomLeft = (0,(1024-(255+67))/1024)
+                                    , topRight = (214/1024,(1024-255)/1024)
+                                    , rotation = 0
+                                    , pivot = (0,0)
+                                    , numberOfFrames = 3
+                                    , duration = 0.5
+                                    , loop = Change "womp"
+                                    }
+                                <| Dict.insert "womp"
+                                    { size = (70,100)
+                                    , bottomLeft = (0,(1024-(455+67))/1024)
+                                    , topRight = (214/1024,(1024-455)/1024)
+                                    , rotation = 0
+                                    , pivot = (0,0)
+                                    , numberOfFrames = 3
+                                    , duration = 0.5
+                                    , loop = Change "idle"
+                                    } Dict.empty
                             ) )
-                        -- |> set graphic_ (Graphic 25 25 Color.red) )
-        |> addEntity ( noComponents -- ground
-                        |> set position_ (Position (-5000, -975, 0))
-                        |> set graphic_ (Graphic 10000 1000 Color.green) )
+        |> ECS.addEntity ( noComponents -- ground
+                        |> ECS.set position_ (Position (-5000, -975, 0))
+                        |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )
 
 loadTexture : String -> Cmd Msg
 loadTexture filePath = Task.attempt TextureLoad <| Task.map ((,) filePath) (Texture.load filePath)
@@ -151,64 +150,77 @@ renderSystem model =
         ]
     << List.filterMap (\entity ->
         let shape =
-            Component.map2 (\(Position pos) (Graphic w h color) ->
+            ECS.map2 (\(Position pos) (Graphic w h color) ->
                 Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) }
             ) entity.position entity.graphic
         in
             case shape of
                 Just s -> shape
                 Nothing ->
-                    Component.map2
+                    ECS.map2
                         (\(Position pos) (Spritesheet texturePath maybeRunningAnimation _) ->
                             case maybeRunningAnimation of
                                 Nothing -> Nothing
-                                Just (RunningAnimation currentFrame _
-                                        (Animation size bottomLeft topRight rotation pivot nFrames _)) ->
-                                            Just <| Render.manuallyManagedAnimatedSpriteWithOptions
-                                                { texture = Dict.get texturePath model.resources
-                                                , position = pos
-                                                , size = size
-                                                , bottomLeft = bottomLeft
-                                                , topRight = topRight
-                                                , rotation = rotation
-                                                , pivot = pivot
-                                                , numberOfFrames = nFrames
-                                                , currentFrame = currentFrame
-                                                }
+                                Just runningAnimation ->
+                                    let animation = runningAnimation.currentAnimation
+                                    in
+                                        Just <| Render.manuallyManagedAnimatedSpriteWithOptions
+                                            { texture = Dict.get texturePath model.resources
+                                            , position = pos
+                                            , size = animation.size
+                                            , bottomLeft = animation.bottomLeft
+                                            , topRight = animation.topRight
+                                            , rotation = animation.rotation
+                                            , pivot = animation.pivot
+                                            , numberOfFrames = animation.numberOfFrames
+                                            , currentFrame = runningAnimation.currentFrame
+                                            }
                     ) entity.position entity.spritesheet |> Maybe.withDefault Nothing
     )
     -- Render.shapeZ doesn't seem to work, so we need to sort manually
-    << List.sortBy (Component.component 0 (\(Position (x,y,z)) -> z) << .position)
+    << List.sortBy (ECS.component 0 (\(Position (x,y,z)) -> z) << .position)
     << Dict.values
     <| model.entities
 
-animationSystem : Time.Time -> Dict Id ComponentSet -> Dict Id ComponentSet
+animationSystem : Time.Time -> Dict Id ComponentTable -> Dict Id ComponentTable
 animationSystem dt =
     Dict.map (\_ entity ->
         entity.spritesheet
-            |> Maybe.andThen
-                (\(Spritesheet filePath maybeRunningAnimation animations) ->
-                    maybeRunningAnimation
-            |> Maybe.andThen
-                (\(RunningAnimation currentFrame timeBeforeNextFrame
-                    (Animation _ _ _ _ _ nFrames duration as animation)) ->
-                    Component.update spritesheet_ (\_ ->
-                        let (cFrame, timeBeforeNext) =
-                            if timeBeforeNextFrame - dt <= 0
-                                then ((currentFrame + 1) % nFrames, (duration / toFloat nFrames) + (timeBeforeNextFrame - dt))
-                                else (currentFrame, timeBeforeNextFrame - dt)
+            |> Maybe.andThen getRunningAnimation
+            |> Maybe.andThen (\ra ->
+                let ca = ra.currentAnimation
+                in
+                    ECS.update spritesheet_ (\spritesheet ->
+                        let setRA =
+                            if ra.timeBeforeNextFrame - dt > 0
+                                then setRunningAnimation <| Just { ra | timeBeforeNextFrame = ra.timeBeforeNextFrame - dt }
+                            else if ra.currentFrame + 1 < ca.numberOfFrames
+                                then setRunningAnimation <|
+                                    Just
+                                        { ra
+                                            | currentFrame = ra.currentFrame + 1
+                                            , timeBeforeNextFrame = (ca.duration / toFloat ca.numberOfFrames) + (ra.timeBeforeNextFrame - dt)
+                                        }
+                            else
+                                case ca.loop of
+                                    Once ->
+                                        setRunningAnimation Nothing
+                                    Loop ->
+                                        setRunningAnimation <|
+                                            Just
+                                                { ra
+                                                    | currentFrame = (ra.currentFrame + 1) % ca.numberOfFrames
+                                                    , timeBeforeNextFrame = (ca.duration / toFloat ca.numberOfFrames) + (ra.timeBeforeNextFrame - dt)
+                                                }
+                                    Change animKey ->
+                                        loadRunningAnimation animKey
                         in
-                            Just <| Spritesheet
-                                filePath
-                                (Just <| RunningAnimation cFrame timeBeforeNext animation)
-                                animations
-                    ) entity |> Just
-                ))
-            |> Maybe.withDefault entity
+                            ECS.map setRA spritesheet
+                ) entity |> Just
+            ) |> Maybe.withDefault entity
+        )
 
-    )
-
-physicsSystem : Time.Time -> Dict Id ComponentSet -> Dict Id ComponentSet
+physicsSystem : Time.Time -> Dict Id ComponentTable -> Dict Id ComponentTable
 physicsSystem dt =
     Dict.map (\_ entity ->
         let applyPhysics (Position (x, y, z)) (Physics (vx, vy) mGravity) =
@@ -217,11 +229,11 @@ physicsSystem dt =
                     yNew = vyNew * dt + y
                     (y_,vy_) = if yNew <= 15 then (15, 0) else (yNew, vyNew)
                 in
-                    [ set position_ <| Position (xNew, y_, z)
-                    , set physics_ <| Physics (vx, vy_) mGravity
+                    [ ECS.set position_ <| Position (xNew, y_, z)
+                    , ECS.set physics_ <| Physics (vx, vy_) mGravity
                     ]
         in
-            case Component.map2 applyPhysics entity.position entity.physics of
+            case ECS.map2 applyPhysics entity.position entity.physics of
                 Nothing -> entity
                 Just updaters -> List.foldl (<|) entity updaters
     )
@@ -229,7 +241,7 @@ physicsSystem dt =
 matchKey : Keyboard.KeyCode -> Key -> Bool
 matchKey code (Key c _) = code == c
 
-playerControlSystem : KeyboardInputs -> Dict Id ComponentSet -> Dict Id ComponentSet
+playerControlSystem : KeyboardInputs -> Dict Id ComponentTable -> Dict Id ComponentTable
 playerControlSystem keys =
     Dict.map (\_ entity ->
         let applyControls (Position pos_) (Physics vel mGravity) PlayerController =
@@ -253,12 +265,12 @@ playerControlSystem keys =
                                 _ -> p
                     )
                 >> (\p ->
-                    [ set position_ <| Position p.position
-                    , set physics_ <| Physics p.velocity mGravity
+                    [ ECS.set position_ <| Position p.position
+                    , ECS.set physics_ <| Physics p.velocity mGravity
                     ]
                     )
         in
-            case Component.map3 applyControls entity.position entity.physics entity.playerController of
+            case ECS.map3 applyControls entity.position entity.physics entity.playerController of
                 Nothing -> entity
                 Just updaters ->
                     List.foldl (<|) entity updaters
