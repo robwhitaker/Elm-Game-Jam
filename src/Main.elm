@@ -34,26 +34,16 @@ initModel =
                         |> ECS.set position_ (Position (0, 0, 1))
                         |> ECS.set physics_ (Physics (0, 0) (Just -5000))
                         |> ECS.set spritesheet_
-                            (makeSpritesheet "/assets/img/temp_sprite.png" "idle"
+                            (makeSpritesheet "/assets/img/player2.png" "idle"
                                 <| Dict.insert "idle"
-                                    { size = (70,100)
-                                    , bottomLeft = (0,(1024-(255+67))/1024)
-                                    , topRight = (214/1024,(1024-255)/1024)
+                                    { size = (56.86,100)
+                                    , bottomLeft = (0,0)
+                                    , topRight = (1,1)
                                     , rotation = 0
                                     , pivot = (0,0)
-                                    , numberOfFrames = 3
-                                    , duration = 0.5
-                                    , loop = Change "womp"
-                                    }
-                                <| Dict.insert "womp"
-                                    { size = (70,100)
-                                    , bottomLeft = (0,(1024-(455+67))/1024)
-                                    , topRight = (214/1024,(1024-455)/1024)
-                                    , rotation = 0
-                                    , pivot = (0,0)
-                                    , numberOfFrames = 3
-                                    , duration = 0.5
-                                    , loop = Change "idle"
+                                    , numberOfFrames = 37
+                                    , duration = 1
+                                    , loop = Loop
                                     } Dict.empty
                             ) )
         |> ECS.addEntity ( noComponents -- ground
@@ -63,7 +53,6 @@ initModel =
 loadTexture : String -> Cmd Msg
 loadTexture filePath = Task.attempt TextureLoad <| Task.map ((,) filePath) (Texture.load filePath)
 
-
 main : Program Never Model Msg
 main =
     Html.program
@@ -72,7 +61,7 @@ main =
             , Cmd.batch
                 [ Task.perform WindowResize Window.size
                 , loadTexture "/assets/img/temp_bg.png"
-                , loadTexture "/assets/img/temp_sprite.png"
+                , loadTexture "/assets/img/player2.png"
                 ]
             )
         , view = view
@@ -118,8 +107,10 @@ update msg model =
                 Result.Err e ->
                     let log = Debug.log "resourceError" (toString e)
                     in (model, Cmd.none)
-                Result.Ok (filePath, texture) ->
-                    ({ model | resources = Dict.insert filePath texture model.resources }, Cmd.none)
+                Result.Ok (filePath, texture) as resource ->
+                    let a = Debug.log "loadedResource" (toString resource)
+                    in
+                        ({ model | resources = Dict.insert filePath texture model.resources }, Cmd.none)
         NoOp -> (model, Cmd.none)
 
 view : Model -> Html.Html msg
