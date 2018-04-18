@@ -50,11 +50,15 @@ type alias RunningAnimation =
     { currentFrame : Int
     , timeBeforeNextFrame : Time
     , currentAnimation : Animation
+    , name : String
     }
 
 getRunningAnimation : Spritesheet -> Maybe RunningAnimation
 getRunningAnimation (Spritesheet _ runningAnimation _) =
     runningAnimation
+
+getRunningAnimationName : Spritesheet -> Maybe String
+getRunningAnimationName = getRunningAnimation >> Maybe.andThen (Just << .name)
 
 setRunningAnimation : Maybe RunningAnimation -> Spritesheet -> Spritesheet
 setRunningAnimation maybeRunningAnimation (Spritesheet texturePath _ animations) =
@@ -65,18 +69,33 @@ makeSpritesheet filePath currentAnimation animations =
     Spritesheet filePath Nothing animations |> loadRunningAnimation currentAnimation
 
 loadRunningAnimation : String -> Spritesheet -> Spritesheet
-loadRunningAnimation currentAnimation (Spritesheet filePath _ animations) =
-    case Dict.get currentAnimation animations of
-        Nothing -> Spritesheet filePath Nothing animations
-        Just animation ->
-            Spritesheet filePath
-                        (Just
-                            { currentFrame = 0
-                            , timeBeforeNextFrame = animation.duration / toFloat animation.numberOfFrames
-                            , currentAnimation = animation
-                            }
-                        )
-                        animations
+loadRunningAnimation currentAnimation (Spritesheet filePath runningAnimation animations as spritesheet) =
+    if Just currentAnimation == Maybe.map .name runningAnimation
+        then spritesheet
+        else
+            case Dict.get currentAnimation animations of
+                Nothing -> Spritesheet filePath Nothing animations
+                Just animation ->
+                    Spritesheet filePath
+                                (Just
+                                    { currentFrame = 0
+                                    , timeBeforeNextFrame = animation.duration / toFloat animation.numberOfFrames
+                                    , currentAnimation = animation
+                                    , name = currentAnimation
+                                    }
+                                )
+                                animations
+
+mapCurrentAnimation : (Animation -> Animation) -> Spritesheet -> Spritesheet
+mapCurrentAnimation f (Spritesheet filePath maybeRunningAnimation animations as spritesheet) =
+    case maybeRunningAnimation of
+        Nothing -> spritesheet
+        Just runningAnimation ->
+            Spritesheet filePath (Just { runningAnimation | currentAnimation = f runningAnimation.currentAnimation }) animations
+
+mapAnimations : (Dict String Animation -> Dict String Animation) -> Spritesheet -> Spritesheet
+mapAnimations f (Spritesheet filePath runningAnimation animations) =
+    Spritesheet filePath runningAnimation (f animations)
 
 ---- UPDATER FUNCTIONS ----
 

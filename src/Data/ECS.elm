@@ -70,6 +70,9 @@ map2 = Maybe.map2
 map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
 map3 = Maybe.map3
 
+map4 : (a -> b -> c -> d -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe value
+map4 = Maybe.map4
+
 component : b -> (a -> b) -> Maybe a -> b
 component default f =
     Maybe.withDefault default << map f
