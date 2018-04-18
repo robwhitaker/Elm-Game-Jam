@@ -3,21 +3,21 @@ module Data.Model exposing (..)
 import Data.Types exposing (..)
 import Data.ComponentTable exposing (..)
 import Data.ECS as ECS
+import Resource
 
 import Time exposing (Time)
 import Dict exposing (Dict)
 import Game.TwoD.Camera as Camera exposing (Camera)
 import Vector2 exposing (Vec2)
-import WebGL.Texture exposing (Texture)
 
 type alias Model =
     ECS.State ComponentTable
-        { tick : Time
-        , keys : KeyboardInputs
-        , camera : Camera
-        , windowSize : Vec2 Int
-        , resources : Dict String Texture
-        }
+        (Resource.ResourceDB
+            { tick : Time
+            , keys : KeyboardInputs
+            , camera : Camera
+            , windowSize : Vec2 Int
+            })
 
 empty : Model
 empty =
@@ -28,5 +28,5 @@ empty =
     , keys = []
     , camera = Camera.fixedWidth 1280 (0,0)
     , windowSize = (0, 0)
-    , resources = Dict.empty
+    , resourceLoader = Resource.loader
     }

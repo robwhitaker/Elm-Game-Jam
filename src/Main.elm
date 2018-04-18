@@ -18,72 +18,57 @@ import Game.TwoD.Camera as Camera
 import Game.TwoD.Render as Render
 import Vector2 as V2
 import Vector3 as V3
-import WebGL.Texture as Texture exposing (Texture)
 
 import Data.Model exposing (..)
 import Messages exposing (..)
 import Data.Types exposing (..)
 import Data.ComponentTable as Component exposing (..)
 import Data.ECS as ECS exposing (Id)
+import Resource
 
-initModel : Model
-initModel =
-    empty
+initEntities : Model -> Model
+initEntities model =
+    model
         |> ECS.addEntityWithSimpleName (Just "player") ( noComponents -- the player
                         |> ECS.set playerController_ PlayerController
                         |> ECS.set position_ (Position (100, 0, 1))
                         |> ECS.set physics_ (Physics (0, 0) (Just -5000))
                         |> ECS.set spritesheet_
-                            (makeSpritesheet "/assets/img/player-spritesheet.png" "running"
-                                <| Dict.insert "idle"
-                                    { size = (75,154)
-                                    , bottomLeft = (0,(1024-154)/1024)
-                                    , topRight = (1975/4096,1)
-                                    , rotation = 0
-                                    , pivot = (0,0)
+                            (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
+                                [ { animationInit
+                                    | name = "idle"
+                                    , stripDimensions = (1975, 154)
                                     , numberOfFrames = 25
                                     , duration = 1
-                                    , loop = Loop
                                     }
-                                <| Dict.insert "running"
-                                    { size = (132, 169)
-                                    , bottomLeft = (0,(1024-154-169)/1024)
-                                    , topRight = (3036/4096,(1024-154)/1024)
-                                    , rotation = 0
-                                    , pivot = (0,0)
+                                , { animationInit
+                                    | name = "running"
+                                    , stripDimensions = (3036, 169)
                                     , numberOfFrames = 23
                                     , duration = 0.8
-                                    , loop = Loop
                                     }
-                                <| Dict.insert "attack"
-                                    { size = (159, 190)
-                                    , bottomLeft = (0,(1024-154-169-190)/1024)
-                                    , topRight = (2385/4096,(1024-154-169)/1024)
-                                    , rotation = 0
-                                    , pivot = (0,0)
+                                , { animationInit
+                                    | name = "attack"
+                                    , stripDimensions = (2385, 190)
                                     , numberOfFrames = 15
                                     , duration = 0.4
-                                    , loop = Loop
-                                    } Dict.empty
-                            ) )
+                                    }
+                                ] model) )
         |> ECS.addEntity ( noComponents -- ground
                         |> ECS.set position_ (Position (-5000, -975, 0))
                         |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )
-
-loadTexture : String -> Cmd Msg
-loadTexture filePath = Task.attempt TextureLoad <| Task.map ((,) filePath) (Texture.load filePath)
 
 main : Program Never Model Msg
 main =
     Html.program
         { init =
-            ( initModel
+            ( empty
             , Cmd.batch
-                [ Task.perform WindowResize Window.size
-                , loadTexture "/assets/img/temp_bg.png"
-                , loadTexture "/assets/img/player-spritesheet.png"
+                [ Task.perform WindowResize Window.size ]
+            ) |> Resource.initLoader
+                [ Resource.loadTexture LoadTexture "/assets/img/temp_bg.png"
+                , Resource.loadTexture LoadTexture "/assets/img/player-spritesheet.png"
                 ]
-            )
         , view = view
         , update = update
         , subscriptions = \_ -> Sub.batch
@@ -122,15 +107,13 @@ update msg model =
             ({ model | keys = keyboardSystem e model.keys }, Cmd.none)
         WindowResize size ->
             ({ model | windowSize = (size.width, size.height) }, Cmd.none)
-        TextureLoad resTexture ->
-            case resTexture of
-                Result.Err e ->
-                    let log = Debug.log "resourceError" (toString e)
-                    in (model, Cmd.none)
-                Result.Ok (filePath, texture) as resource ->
-                    let a = Debug.log "loadedResource" (toString resource)
-                    in
-                        ({ model | resources = Dict.insert filePath texture model.resources }, Cmd.none)
+        LoadTexture loaderMsg ->
+            let newLoader = Resource.updateLoader loaderMsg model.resourceLoader
+                a = Debug.log "Loads pending" (toString newLoader.pending)
+            in
+                if newLoader.pending <= 0
+                    then (initEntities { model | resourceLoader = newLoader }, Cmd.none)
+                    else ({ model | resourceLoader = newLoader }, Cmd.none)
         NoOp -> (model, Cmd.none)
 
 view : Model -> Html.Html msg
@@ -148,13 +131,13 @@ renderSystem model =
     << (++)
         [ Render.parallaxScroll
             { z = -0.99
-            , texture = Dict.get "/assets/img/temp_bg.png" model.resources
+            , texture = Resource.getTexture "/assets/img/temp_bg.png" model
             , tileWH = (2,2)
             , scrollSpeed = (0.005, 0.005)
             }
         , Render.parallaxScroll
             { z = -0.98
-            , texture = Dict.get "/assets/img/temp_bg.png" model.resources
+            , texture = Resource.getTexture "/assets/img/temp_bg.png" model
             , tileWH = (1,1)
             , scrollSpeed = (0.01, 0.01)
             }
@@ -180,7 +163,7 @@ renderSystem model =
                                     let animation = runningAnimation.currentAnimation
                                     in
                                         Just <| Render.manuallyManagedAnimatedSpriteWithOptions
-                                            { texture = Dict.get texturePath model.resources
+                                            { texture = Resource.getTexture texturePath model
                                             , position = pos
                                             , size = animation.size
                                             , bottomLeft = animation.bottomLeft
