@@ -3,8 +3,8 @@ module Messages exposing (..)
 import Time exposing (Time)
 import Window exposing (Size)
 
-import Data.Types exposing (..)
 import Resource
+import KeyboardInput exposing (KeyboardEvent)
 
 type Msg
     = NoOp

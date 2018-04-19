@@ -1,6 +1,7 @@
-module Data.ECS exposing (..)
+module ECS exposing (..)
 
 import Dict exposing (Dict)
+import Time exposing (Time)
 
 ------ CORE ------
 
@@ -44,7 +45,15 @@ getEntityBySimpleName name state =
 ------ SYSTEM ------
 
 type alias System entity o msg =
-    (State entity o, Cmd msg) -> (State entity o, Cmd msg)
+    Time -> State entity o -> (State entity o, Cmd msg)
+
+runSystems : Time -> State entity o -> List (System entity o msg) -> (State entity o, Cmd msg)
+runSystems dt state systems =
+    List.foldl (\system (state, cmds) ->
+        let (newState, newCmds) = system dt state
+        in
+            (newState, Cmd.batch [newCmds, cmds])
+    ) (state, Cmd.none) systems
 
 ------ COMPONENT ------
 
