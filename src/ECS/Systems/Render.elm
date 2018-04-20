@@ -30,14 +30,14 @@ render model =
         ]
     << List.filterMap (\entity ->
         let shape =
-            ECS.map2 (\(Position pos) (Graphic w h color) ->
+            Maybe.map2 (\(Position pos) (Graphic w h color) ->
                 Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) }
             ) entity.position entity.graphic
         in
             case shape of
                 Just s -> shape
                 Nothing ->
-                    ECS.map2
+                    Maybe.map2
                         (\(Position pos) (Spritesheet texturePath maybeRunningAnimation _) ->
                             case maybeRunningAnimation of
                                 Nothing -> Nothing

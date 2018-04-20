@@ -58,7 +58,6 @@ update msg model =
             in
                 ({model
                     | entities = newEntities
-                    , keys = KeyboardInput.setHoldingAll model.keys
                     , camera = Camera.moveTo (cameraPos playerPos) model.camera
                     }
                 , cmds)

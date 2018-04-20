@@ -55,6 +55,22 @@ runSystems dt state systems =
             (newState, Cmd.batch [newCmds, cmds])
     ) (state, Cmd.none) systems
 
+processEntities : (State entity o -> Id -> entity -> (State entity o, Maybe entity, Cmd msg)) -> State entity o -> (State entity o, Cmd msg)
+processEntities sysFn state =
+    Dict.foldl (\id _ (s, cmds) ->
+        case Dict.get id s.entities of
+            Nothing -> (s, cmds)
+            Just currentEntity ->
+                let (newState, maybeNewEntity, newCmds) = sysFn s id currentEntity
+                in
+                    case maybeNewEntity of
+                        Nothing -> (newState, Cmd.batch [ cmds, newCmds ])
+                        Just newEntity ->
+                            ( { newState | entities = Dict.insert id newEntity newState.entities }
+                            , Cmd.batch [ cmds, newCmds ]
+                            )
+    ) (state, Cmd.none) state.entities
+
 ------ COMPONENT ------
 
 -- Updater helpers
@@ -70,18 +86,15 @@ remove : Updater a componentTable -> componentTable -> componentTable
 remove updater = updater (always Nothing)
 
 -- Mapping functions (re-exports from Maybe, in case of implementation change)
-map : (a -> b) -> Maybe a -> Maybe b
-map = Maybe.map
+with : (entity -> Maybe a) -> (a -> value) -> entity -> Maybe value
+with c f e = Maybe.map f (c e)
 
-map2 : (a -> b -> value) -> Maybe a -> Maybe b -> Maybe value
-map2 = Maybe.map2
+with2 : (entity -> Maybe a) -> (entity -> Maybe b) -> (a -> b -> value) -> entity -> Maybe value
+with2 c1 c2 f e = Maybe.map2 f (c1 e) (c2 e)
 
-map3 : (a -> b -> c -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe value
-map3 = Maybe.map3
-
-map4 : (a -> b -> c -> d -> value) -> Maybe a -> Maybe b -> Maybe c -> Maybe d -> Maybe value
-map4 = Maybe.map4
+with3 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (a -> b -> c -> value) -> entity -> Maybe value
+with3 c1 c2 c3 f e = Maybe.map3 f (c1 e) (c2 e) (c3 e)
 
 component : b -> (a -> b) -> Maybe a -> b
 component default f =
-    Maybe.withDefault default << map f
+    Maybe.withDefault default << Maybe.map f

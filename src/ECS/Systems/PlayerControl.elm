@@ -8,18 +8,17 @@ import ECS.Components.Spritesheet exposing (..)
 import Data.State exposing (System)
 import KeyboardInput exposing (..)
 
-
-import Dict
 import Vector2 as V2
 import Vector3 as V3
 
 playerControl : System msg
-playerControl _ model =
-    let keys = model.keys
-        newEntities =
-            Dict.map (\_ entity ->
-                let applyControls (Position pos_) (Physics vel mGravity) PlayerController =
-                        { position = pos_, velocity = vel }
+playerControl _ =
+    ECS.processEntities (\state _ entity ->
+        let keys = state.keys
+        in
+            entity
+                |> ECS.with3 .position .physics .playerController (\(Position pos_) (Physics vel mGravity) PlayerController ->
+                    { position = pos_, velocity = vel }
                         |> (\p -> -- jumping
                             if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
                                 then { p | velocity = (V2.getX p.velocity, 1500) }
@@ -39,84 +38,80 @@ playerControl _ model =
                                         _ -> p
                             )
                         >> (\p ->
-                            [ ECS.set position_ <| Position p.position
-                            , ECS.set physics_ <| Physics p.velocity mGravity
-                            , ECS.update spritesheet_ <| \maybeSpritesheet ->
-                                case maybeSpritesheet of
-                                    Nothing -> Nothing
-                                    Just spritesheet ->
-                                        if keyDown 88 keys
-                                            then
-                                                case getRunningAnimation spritesheet of
-                                                    Nothing -> Just spritesheet
-                                                    Just anim ->
-                                                        let width = (V2.getX anim.currentAnimation.size)
-                                                            dir = width / (abs width)
-                                                        in
-                                                            loadRunningAnimation "attack" spritesheet
-                                                                |> mapCurrentAnimation (\cAnim ->
-                                                                    { cAnim
-                                                                        | size = (,)
-                                                                            ((abs (V2.getX cAnim.size)) * dir)
-                                                                            (V2.getY cAnim.size)
-                                                                        , pivot =
-                                                                            if dir < 0 then
-                                                                                (0.35,0)
-                                                                            else
-                                                                                (0,0)
-                                                                    }) |> Just
-                                            else
-                                                if V2.getX p.velocity == 0
-                                                    then
-                                                        case getRunningAnimation spritesheet of
-                                                            Nothing -> Just (loadRunningAnimation "idle" spritesheet)
-                                                            Just anim ->
-                                                                let width = (V2.getX anim.currentAnimation.size)
-                                                                    dir = width / (abs width)
-                                                                in
-                                                                    loadRunningAnimation "idle" spritesheet
-                                                                        |> mapCurrentAnimation (\cAnim ->
-                                                                            { cAnim
-                                                                                | size = (,)
-                                                                                    ((abs (V2.getX cAnim.size)) * dir)
-                                                                                    (V2.getY cAnim.size)
-                                                                                , pivot =
-                                                                                    if dir < 0 then
-                                                                                        (0.5,0)
-                                                                                    else
-                                                                                        (0,0)
-                                                                            }) |> Just
-                                                    else
-                                                        let velX = V2.getX p.velocity
-                                                            dir = velX / (abs velX)
-                                                            spritesheetNew = loadRunningAnimation "running" spritesheet
-                                                        in
-                                                            case getRunningAnimation spritesheetNew of
-                                                                Nothing -> Just spritesheetNew
+                            entity
+                                |> ECS.set position_ (Position p.position)
+                                |> ECS.set physics_ (Physics p.velocity mGravity)
+                                |> ECS.update spritesheet_ (\maybeSpritesheet ->
+                                    case maybeSpritesheet of
+                                        Nothing -> Nothing
+                                        Just spritesheet ->
+                                            if keyDown 88 keys
+                                                then
+                                                    case getRunningAnimation spritesheet of
+                                                        Nothing -> Just spritesheet
+                                                        Just anim ->
+                                                            let width = (V2.getX anim.currentAnimation.size)
+                                                                dir = width / (abs width)
+                                                            in
+                                                                loadRunningAnimation "attack" spritesheet
+                                                                    |> mapCurrentAnimation (\cAnim ->
+                                                                        { cAnim
+                                                                            | size = (,)
+                                                                                ((abs (V2.getX cAnim.size)) * dir)
+                                                                                (V2.getY cAnim.size)
+                                                                            , pivot =
+                                                                                if dir < 0 then
+                                                                                    (0.35,0)
+                                                                                else
+                                                                                    (0,0)
+                                                                        }) |> Just
+                                                else
+                                                    if V2.getX p.velocity == 0
+                                                        then
+                                                            case getRunningAnimation spritesheet of
+                                                                Nothing -> Just (loadRunningAnimation "idle" spritesheet)
                                                                 Just anim ->
-                                                                    let cAnim = anim.currentAnimation
+                                                                    let width = (V2.getX anim.currentAnimation.size)
+                                                                        dir = width / (abs width)
                                                                     in
-                                                                        setRunningAnimation
-                                                                            (Just { anim
-                                                                                | currentAnimation =
-                                                                                    { cAnim
-                                                                                        | size = (,)
-                                                                                            ((abs (V2.getX cAnim.size)) * dir)
-                                                                                            (V2.getY cAnim.size)
-                                                                                        , pivot =
-                                                                                            if dir < 1 then
-                                                                                                (0.5,0)
-                                                                                            else
-                                                                                                (0,0)
-                                                                                    }
-                                                                            }) spritesheetNew |> Just
-                            ]
-                            )
-                in
-                    case ECS.map3 applyControls entity.position entity.physics entity.playerController of
-                        Nothing -> entity
-                        Just updaters ->
-                            List.foldl (<|) entity updaters
-            ) model.entities
-    in
-        ({ model | entities = newEntities }, Cmd.none)
+                                                                        loadRunningAnimation "idle" spritesheet
+                                                                            |> mapCurrentAnimation (\cAnim ->
+                                                                                { cAnim
+                                                                                    | size = (,)
+                                                                                        ((abs (V2.getX cAnim.size)) * dir)
+                                                                                        (V2.getY cAnim.size)
+                                                                                    , pivot =
+                                                                                        if dir < 0 then
+                                                                                            (0.5,0)
+                                                                                        else
+                                                                                            (0,0)
+                                                                                }) |> Just
+                                                        else
+                                                            let velX = V2.getX p.velocity
+                                                                dir = velX / (abs velX)
+                                                                spritesheetNew = loadRunningAnimation "running" spritesheet
+                                                            in
+                                                                case getRunningAnimation spritesheetNew of
+                                                                    Nothing -> Just spritesheetNew
+                                                                    Just anim ->
+                                                                        let cAnim = anim.currentAnimation
+                                                                        in
+                                                                            setRunningAnimation
+                                                                                (Just { anim
+                                                                                    | currentAnimation =
+                                                                                        { cAnim
+                                                                                            | size = (,)
+                                                                                                ((abs (V2.getX cAnim.size)) * dir)
+                                                                                                (V2.getY cAnim.size)
+                                                                                            , pivot =
+                                                                                                if dir < 1 then
+                                                                                                    (0.5,0)
+                                                                                                else
+                                                                                                    (0,0)
+                                                                                        }
+                                                                                }) spritesheetNew |> Just
+                                )
+                        )
+                ) |> (\e -> (state, e, Cmd.none))
+    ) >> (\(s, c) ->
+        ({ s | keys = KeyboardInput.setHoldingAll s.keys }, c) )
