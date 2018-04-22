@@ -36,6 +36,8 @@ type alias AnimationInit =
     , numberOfFrames : Int
     , duration : Float
     , loop : AnimationLoop
+    , pivot : Float2
+    , rotation : Float
     }
 
 animationInit : AnimationInit
@@ -46,6 +48,8 @@ animationInit =
     , numberOfFrames = 1
     , duration = 1
     , loop = Loop
+    , pivot = (0, 0)
+    , rotation = 0
     }
 
 getRunningAnimation : Spritesheet -> Maybe RunningAnimation
@@ -75,8 +79,8 @@ makeSpritesheet filePath currentAnimation animations resourceDB =
                                 { size = (anim.scale * sw / toFloat anim.numberOfFrames, anim.scale * sh)
                                 , bottomLeft = (0, (th-topOffset-sh)/th)
                                 , topRight = (sw/tw,(th-topOffset)/th)
-                                , rotation = 0
-                                , pivot = (0,0)
+                                , rotation = anim.rotation
+                                , pivot = anim.pivot
                                 , numberOfFrames = anim.numberOfFrames
                                 , duration = anim.duration
                                 , loop = anim.loop

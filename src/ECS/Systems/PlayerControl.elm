@@ -8,110 +8,110 @@ import ECS.Components.Spritesheet exposing (..)
 import Data.State exposing (System)
 import KeyboardInput exposing (..)
 
+import Dict
 import Vector2 as V2
 import Vector3 as V3
 
 playerControl : System msg
-playerControl _ =
+playerControl dt =
     ECS.processEntities (\state _ entity ->
         let keys = state.keys
         in
             entity
-                |> ECS.with3 .position .physics .playerController (\(Position pos_) (Physics vel mGravity) PlayerController ->
-                    { position = pos_, velocity = vel }
-                        |> (\p -> -- jumping
-                            if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
-                                then { p | velocity = (V2.getX p.velocity, 1500) }
-                                else p)
-                        >> (\p -> -- fast falling
-                            if V3.getY p.position > 15 && List.member (Key 40 Pressed) keys
-                                then { p | velocity = (V2.getX p.velocity, -1500) }
-                                else p
-                            )
-                        >> (\p -> -- horizontal movement
-                            case List.head (List.filter (\(Key n _) -> n == 37 || n == 39) keys) of
-                                Nothing -> { p | velocity = (0, V2.getY p.velocity) }
-                                Just (Key n _) ->
-                                    case n of
-                                        37 -> { p | velocity = (-750, V2.getY p.velocity) }
-                                        39 -> { p | velocity = (750, V2.getY p.velocity) }
-                                        _ -> p
-                            )
-                        >> (\p ->
-                            entity
-                                |> ECS.set position_ (Position p.position)
-                                |> ECS.set physics_ (Physics p.velocity mGravity)
-                                |> ECS.update spritesheet_ (\maybeSpritesheet ->
-                                    case maybeSpritesheet of
-                                        Nothing -> Nothing
-                                        Just spritesheet ->
-                                            if keyDown 88 keys
-                                                then
-                                                    case getRunningAnimation spritesheet of
-                                                        Nothing -> Just spritesheet
-                                                        Just anim ->
-                                                            let width = (V2.getX anim.currentAnimation.size)
-                                                                dir = width / (abs width)
-                                                            in
-                                                                loadRunningAnimation "attack" spritesheet
-                                                                    |> mapCurrentAnimation (\cAnim ->
-                                                                        { cAnim
-                                                                            | size = (,)
-                                                                                ((abs (V2.getX cAnim.size)) * dir)
-                                                                                (V2.getY cAnim.size)
-                                                                            , pivot =
-                                                                                if dir < 0 then
-                                                                                    (0.35,0)
-                                                                                else
-                                                                                    (0,0)
-                                                                        }) |> Just
-                                                else
-                                                    if V2.getX p.velocity == 0
-                                                        then
-                                                            case getRunningAnimation spritesheet of
-                                                                Nothing -> Just (loadRunningAnimation "idle" spritesheet)
-                                                                Just anim ->
-                                                                    let width = (V2.getX anim.currentAnimation.size)
-                                                                        dir = width / (abs width)
-                                                                    in
-                                                                        loadRunningAnimation "idle" spritesheet
-                                                                            |> mapCurrentAnimation (\cAnim ->
-                                                                                { cAnim
-                                                                                    | size = (,)
-                                                                                        ((abs (V2.getX cAnim.size)) * dir)
-                                                                                        (V2.getY cAnim.size)
-                                                                                    , pivot =
-                                                                                        if dir < 0 then
-                                                                                            (0.5,0)
-                                                                                        else
-                                                                                            (0,0)
-                                                                                }) |> Just
-                                                        else
-                                                            let velX = V2.getX p.velocity
-                                                                dir = velX / (abs velX)
-                                                                spritesheetNew = loadRunningAnimation "running" spritesheet
-                                                            in
-                                                                case getRunningAnimation spritesheetNew of
-                                                                    Nothing -> Just spritesheetNew
-                                                                    Just anim ->
-                                                                        let cAnim = anim.currentAnimation
-                                                                        in
-                                                                            setRunningAnimation
-                                                                                (Just { anim
-                                                                                    | currentAnimation =
-                                                                                        { cAnim
-                                                                                            | size = (,)
-                                                                                                ((abs (V2.getX cAnim.size)) * dir)
-                                                                                                (V2.getY cAnim.size)
-                                                                                            , pivot =
-                                                                                                if dir < 1 then
-                                                                                                    (0.5,0)
-                                                                                                else
-                                                                                                    (0,0)
-                                                                                        }
-                                                                                }) spritesheetNew |> Just
+                |> ECS.with5 .position .physics .direction .spritesheet .playerController
+                    (\(Position pos_) (Physics vel mGravity) direction (Spritesheet _ runningAnimation animations as spritesheet) (PlayerController playerState) ->
+                        { position = pos_, velocity = vel, playerState = playerState, direction = direction }
+                            |> (\p -> -- clear/update controls from last inputs
+                                case p.playerState of
+                                    Attacking duration ->
+                                        if duration - dt <= 0
+                                            then { p | playerState = Idle }
+                                            else { p | playerState = Attacking (duration - dt) }
+                                    _ -> p
                                 )
-                        )
-                ) |> (\e -> (state, e, Cmd.none))
-    ) >> (\(s, c) ->
-        ({ s | keys = KeyboardInput.setHoldingAll s.keys }, c) )
+                            |> (\p -> -- jumping
+                                case p.playerState of
+                                    Attacking _ -> p
+                                    _ ->
+                                        if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
+                                            then { p | velocity = (V2.getX p.velocity, 1500) }
+                                            else p
+                                )
+                            >> (\p -> -- fast falling
+                                if V3.getY p.position > 15 && V2.getY p.velocity <= 0 && List.member (Key 40 Pressed) keys
+                                    then { p | velocity = (V2.getX p.velocity, -1500) }
+                                    else p
+                                )
+                            >> (\p -> -- attacking
+                                if List.member (Key 88 Pressed) keys
+                                    then
+                                        let attackDuration =
+                                                Dict.get "attack" animations
+                                                    |> Maybe.andThen (Just << .duration)
+                                                    |> Maybe.withDefault 0
+                                        in
+                                            { p | playerState = Attacking attackDuration }
+                                    else p
+                                )
+                            >> (\p -> -- horizontal movement
+                                let moveSpeed = 750
+                                    maybeInputDir =
+                                        case List.head (List.filter (\(Key n _) -> n == 37 || n == 39) keys) of
+                                            Just (Key 37 _) -> Just Left
+                                            Just (Key 39 _) -> Just Right
+                                            _               -> Nothing
+                                in
+                                    case maybeInputDir of
+                                        Nothing ->
+                                            { p | velocity = (0, V2.getY p.velocity) }
+                                        Just inputDir ->
+                                            let facing =
+                                                    if V3.getY p.position > 15 || isAttacking p.playerState
+                                                        then p.direction
+                                                        else inputDir
+                                                newVelX =
+                                                    if isAttacking p.playerState && V3.getY p.position <= 15
+                                                        then 0
+                                                        else turn inputDir moveSpeed
+                                                newPState =
+                                                    if newVelX /= 0 && not (isAttacking p.playerState)
+                                                        then Running
+                                                        else p.playerState
+                                            in
+                                                { p | velocity = (newVelX, V2.getY p.velocity)
+                                                    , direction = facing
+                                                    , playerState = newPState
+                                                }
+                                )
+                            >> (\p ->
+                                if V2.getX p.velocity == 0 && not (isAttacking p.playerState)
+                                    then { p | playerState = Idle }
+                                    else p
+                                )
+                            >> (\p ->
+                                let a = Debug.log "wtf" (toString p)
+                                    k = Debug.log "keys" (toString keys)
+                                in
+                                entity
+                                    |> ECS.set playerController_ (PlayerController p.playerState)
+                                    |> ECS.set position_ (Position p.position)
+                                    |> ECS.set physics_ (Physics p.velocity mGravity)
+                                    |> ECS.set direction_ p.direction
+                                    |> ECS.set spritesheet_
+                                        (let newAnim =
+                                            case p.playerState of
+                                                Attacking _ -> "attack"
+                                                Idle -> "idle"
+                                                Running -> "running"
+                                        in
+                                            loadRunningAnimation newAnim spritesheet
+                                                |> mapCurrentAnimation (\cAnim ->
+                                                    { cAnim
+                                                        | size = (,)
+                                                            (turn p.direction (V2.getX cAnim.size))
+                                                            (V2.getY cAnim.size)
+                                                    }))
+                                )
+                    ) |> (\e -> (state, e, Cmd.none))
+        ) >> (\(s, c) ->
+            ({ s | keys = KeyboardInput.setHoldingAll s.keys }, c) )

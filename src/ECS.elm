@@ -95,6 +95,13 @@ with2 c1 c2 f e = Maybe.map2 f (c1 e) (c2 e)
 with3 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (a -> b -> c -> value) -> entity -> Maybe value
 with3 c1 c2 c3 f e = Maybe.map3 f (c1 e) (c2 e) (c3 e)
 
+with4 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (entity -> Maybe d) -> (a -> b -> c -> d -> value) -> entity -> Maybe value
+with4 c1 c2 c3 c4 f e = Maybe.map4 f (c1 e) (c2 e) (c3 e) (c4 e)
+
+with5 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (entity -> Maybe d) -> (entity -> Maybe e)
+     -> (a -> b -> c -> d -> e -> value) -> entity -> Maybe value
+with5 c1 c2 c3 c4 c5 f e = Maybe.map5 f (c1 e) (c2 e) (c3 e) (c4 e) (c5 e)
+
 component : b -> (a -> b) -> Maybe a -> b
 component default f =
     Maybe.withDefault default << Maybe.map f

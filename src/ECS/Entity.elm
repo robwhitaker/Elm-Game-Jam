@@ -12,6 +12,7 @@ type alias Entity =
     , position : Maybe Position
     , physics : Maybe Physics
     , graphic : Maybe Graphic
+    , direction : Maybe Direction
     , spritesheet : Maybe Spritesheet
     }
 
@@ -21,6 +22,7 @@ noComponents =
     , position = Nothing
     , physics = Nothing
     , graphic = Nothing
+    , direction = Nothing
     , spritesheet = Nothing
     }
 
@@ -37,6 +39,9 @@ physics_ f cSet = { cSet | physics = f cSet.physics }
 
 graphic_ : Updater Graphic
 graphic_ f cSet = { cSet | graphic = f cSet.graphic }
+
+direction_ : Updater Direction
+direction_ f cSet = { cSet | direction = f cSet.direction }
 
 spritesheet_ : Updater Spritesheet
 spritesheet_ f cSet = { cSet | spritesheet = f cSet.spritesheet }

@@ -37,11 +37,11 @@ main =
         }
 
 update : Msg -> State -> (State, Cmd msg)
-update msg model =
+update msg state =
     case msg of
         Tick dt ->
             let (newState, cmds) =
-                    ECS.runSystems dt model
+                    ECS.runSystems dt state
                         [ Systems.playerControl
                         , Systems.physics
                         , Systems.animation
@@ -56,27 +56,23 @@ update msg model =
                     \(x, y, _) ->
                         (x*0.8, 300+y*0.2)
             in
-                ({model
-                    | entities = newEntities
-                    , camera = Camera.moveTo (cameraPos playerPos) model.camera
-                    }
-                , cmds)
+                ({ newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
 
         KeyboardEvent e ->
-            ({ model | keys = KeyboardInput.update e model.keys }, Cmd.none)
+            ({ state | keys = KeyboardInput.update e state.keys }, Cmd.none)
 
         WindowResize size ->
-            ({ model | windowSize = (size.width, size.height) }, Cmd.none)
+            ({ state | windowSize = (size.width, size.height) }, Cmd.none)
 
         LoadTexture loaderMsg ->
-            let newLoader = Resource.updateLoader loaderMsg model.resourceLoader
+            let newLoader = Resource.updateLoader loaderMsg state.resourceLoader
                 a = Debug.log "Loads pending" (toString newLoader.pending)
             in
                 if newLoader.pending <= 0
-                    then (Init.entities { model | resourceLoader = newLoader }, Cmd.none)
-                    else ({ model | resourceLoader = newLoader }, Cmd.none)
+                    then (Init.entities { state | resourceLoader = newLoader }, Cmd.none)
+                    else ({ state | resourceLoader = newLoader }, Cmd.none)
 
-        NoOp -> (model, Cmd.none)
+        NoOp -> (state, Cmd.none)
 
 view : State -> Html msg
 view = Systems.render
