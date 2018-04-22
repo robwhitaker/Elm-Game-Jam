@@ -43,6 +43,19 @@ entities model =
                                     , pivot = (0.35, 0)
                                     }
                                 ] model) )
+        |> ECS.addEntity ( noComponents
+                        |> ECS.set position_ (Position (1000, 15, 0.9))
+                        |> ECS.set direction_ Left
+                        |> ECS.set spritesheet_
+                            (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
+                                [ { animationInit
+                                    | name = "idle"
+                                    , stripDimensions = (1975, 154)
+                                    , numberOfFrames = 25
+                                    , duration = 1
+                                    , pivot = (0.5, 0)
+                                    }
+                                ] model) )
         |> ECS.addEntity ( noComponents -- ground
                         |> ECS.set position_ (Position (-5000, -975, 0))
                         |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )

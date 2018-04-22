@@ -103,19 +103,13 @@ playerControl dt =
                                     |> ECS.set physics_ (Physics p.velocity mGravity)
                                     |> ECS.set direction_ p.direction
                                     |> ECS.set spritesheet_
-                                        (let newAnim =
+                                        ( let newAnim =
                                             case p.playerState of
                                                 Attacking _ -> "attack"
                                                 Idle -> "idle"
                                                 Running -> "running"
                                         in
-                                            loadRunningAnimation newAnim spritesheet
-                                                |> mapCurrentAnimation (\cAnim ->
-                                                    { cAnim
-                                                        | size = (,)
-                                                            (turn p.direction (V2.getX cAnim.size))
-                                                            (V2.getY cAnim.size)
-                                                    }))
+                                            loadRunningAnimation newAnim spritesheet )
                                 )
                     ) |> (\e -> (state, e, Cmd.none))
         ) >> (\(s, c) ->
