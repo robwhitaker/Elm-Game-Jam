@@ -85,22 +85,23 @@ update = identity
 remove : Updater a componentTable -> componentTable -> componentTable
 remove updater = updater (always Nothing)
 
--- Mapping functions (re-exports from Maybe, in case of implementation change)
-with : (entity -> Maybe a) -> (a -> value) -> entity -> Maybe value
-with c f e = Maybe.map f (c e)
+-- Helpers for matching entities
 
-with2 : (entity -> Maybe a) -> (entity -> Maybe b) -> (a -> b -> value) -> entity -> Maybe value
-with2 c1 c2 f e = Maybe.map2 f (c1 e) (c2 e)
+-- Continuation-ish style. Can be used when more than the withN functions provide is needed.
+with : (entity -> Maybe a) -> entity -> Maybe (entity, ((a -> r) -> r))
+with getter entity =
+    Maybe.map ((,) entity << (|>)) (getter entity)
 
-with3 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (a -> b -> c -> value) -> entity -> Maybe value
-with3 c1 c2 c3 f e = Maybe.map3 f (c1 e) (c2 e) (c3 e)
+andWith : (entity -> Maybe b) -> Maybe (entity, a -> b -> r) -> Maybe (entity, a -> r)
+andWith getter =
+    Maybe.andThen (\(entity, cont) ->
+        Maybe.map (\component -> (,) entity <| \c -> ((|>) component) (cont c)) (getter entity))
 
-with4 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (entity -> Maybe d) -> (a -> b -> c -> d -> value) -> entity -> Maybe value
-with4 c1 c2 c3 c4 f e = Maybe.map4 f (c1 e) (c2 e) (c3 e) (c4 e)
+processEntity : a -> Maybe (entity, (a -> r)) -> Maybe r
+processEntity f maybeCont =
+    Maybe.map ((|>) f << Tuple.second) maybeCont
 
-with5 : (entity -> Maybe a) -> (entity -> Maybe b) -> (entity -> Maybe c) -> (entity -> Maybe d) -> (entity -> Maybe e)
-     -> (a -> b -> c -> d -> e -> value) -> entity -> Maybe value
-with5 c1 c2 c3 c4 c5 f e = Maybe.map5 f (c1 e) (c2 e) (c3 e) (c4 e) (c5 e)
+-- Misc. Helpers
 
 component : b -> (a -> b) -> Maybe a -> b
 component default f =

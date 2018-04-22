@@ -18,7 +18,12 @@ playerControl dt =
         let keys = state.keys
         in
             entity
-                |> ECS.with5 .position .physics .direction .spritesheet .playerController
+                |> ECS.with .position
+                |> ECS.andWith .physics
+                |> ECS.andWith .direction
+                |> ECS.andWith .spritesheet
+                |> ECS.andWith .playerController
+                |> ECS.processEntity
                     (\(Position pos_) (Physics vel mGravity) direction (Spritesheet _ runningAnimation animations as spritesheet) (PlayerController playerState) ->
                         { position = pos_, velocity = vel, playerState = playerState, direction = direction }
                             |> (\p -> -- clear/update controls from last inputs

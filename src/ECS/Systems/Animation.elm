@@ -9,7 +9,8 @@ animation : System msg
 animation dt =
     ECS.processEntities (\state _ entity ->
         entity
-            |> ECS.with .spritesheet (\spritesheet ->
+            |> ECS.with .spritesheet
+            |> ECS.processEntity (\spritesheet ->
                 getRunningAnimation spritesheet
                     |> Maybe.andThen (\ra ->
                         let ca = ra.currentAnimation
