@@ -1,9 +1,14 @@
 module ECS.Components.Collision exposing (..)
 
+import Collision2D exposing (Rectangle)
 import Vector2 as V2 exposing (Float2)
 import Vector3 as V3 exposing (Float3)
 
-type Collision = Collision
+type Collision = Collision CollisionClass
+
+type CollisionClass
+    = Player
+    | Enemy
 
 type Hitbox
     = Hitbox Rect
@@ -17,7 +22,14 @@ type alias Rect =
 type alias WorldRect =
     { position : Float3
     , size : Float2
+    , collisionRect : Rectangle
     }
+
+getRect : Hitbox -> Rect
+getRect hbox =
+    case hbox of
+        Hitbox r -> r
+        Hurtbox r -> r
 
 worldRect : Float3 -> Float2 -> Float2 -> Rect -> WorldRect
 worldRect (px, py, pz) (sx, sy) (pivX, pivY) rect =
@@ -32,4 +44,5 @@ worldRect (px, py, pz) (sx, sy) (pivX, pivY) rect =
     in
         { position = (rpx, rpy, pz - 0.01)
         , size = (rsx, rsy)
+        , collisionRect = Collision2D.rectangle rpx rpy rsx rsy
         }

@@ -20,6 +20,8 @@ entities model =
                         |> ECS.set position_ (Position (100, 0, 1))
                         |> ECS.set physics_ (Physics (0, 0) (Just -5000))
                         |> ECS.set direction_ Right
+                        |> ECS.set hp_ (HP 10)
+                        |> ECS.set collision_ (Collision Player)
                         |> ECS.set spritesheet_
                             (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
                                 [ { animationInit
@@ -71,7 +73,9 @@ entities model =
                                 ] model) )
         |> ECS.addEntity ( noComponents
                         |> ECS.set position_ (Position (1000, 15, 0.9))
-                        |> ECS.set direction_ Left
+                        |> ECS.set direction_ Right
+                        |> ECS.set hp_ (HP 10)
+                        |> ECS.set collision_ (Collision Enemy)
                         |> ECS.set spritesheet_
                             (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
                                 [ { animationInit

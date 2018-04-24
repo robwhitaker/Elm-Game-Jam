@@ -94,9 +94,6 @@ playerControl dt =
                                     else p
                                 )
                             >> (\p ->
-                                let a = Debug.log "wtf" (toString p)
-                                    k = Debug.log "keys" (toString keys)
-                                in
                                 entity
                                     |> ECS.set playerController_ (PlayerController p.playerState)
                                     |> ECS.set position_ (Position p.position)

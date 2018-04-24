@@ -16,6 +16,7 @@ type alias Entity =
     , direction : Maybe Direction
     , spritesheet : Maybe Spritesheet
     , collision : Maybe Collision
+    , hp : Maybe HP
     }
 
 noComponents : Entity
@@ -27,6 +28,7 @@ noComponents =
     , direction = Nothing
     , spritesheet = Nothing
     , collision = Nothing
+    , hp = Nothing
     }
 
 ---- UPDATER FUNCTIONS ----
@@ -51,3 +53,6 @@ spritesheet_ f cSet = { cSet | spritesheet = f cSet.spritesheet }
 
 collision_ : Updater Collision
 collision_ f cSet = { cSet | collision = f cSet.collision }
+
+hp_ : Updater HP
+hp_ f cSet = { cSet | hp = f cSet.hp }

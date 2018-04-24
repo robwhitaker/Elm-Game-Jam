@@ -43,6 +43,7 @@ update msg state =
             let (newState, cmds) =
                     ECS.runSystems dt state
                         [ Systems.playerControl
+                        , Systems.collision
                         , Systems.physics
                         , Systems.animation
                         ]

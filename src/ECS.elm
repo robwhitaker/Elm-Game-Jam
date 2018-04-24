@@ -42,6 +42,23 @@ getEntityBySimpleName name state =
     Dict.get name state.entitySimpleNames
         |> Maybe.andThen (flip getEntityById state)
 
+-- remove an entity by its id. Does not currently clean up the simple name.
+removeEntityById : Id -> State entity o -> State entity o
+removeEntityById id state =
+    { state | entities = Dict.remove id state.entities }
+
+-- update an entity by its id
+updateEntityById : Id -> (entity -> entity) -> State entity o -> State entity o
+updateEntityById id fn state =
+    { state | entities = Dict.update id (Maybe.map fn) state.entities }
+
+-- update an entity by its simple name
+updateEntityBySimpleName : String -> (entity -> entity) -> State entity o -> State entity o
+updateEntityBySimpleName name fn state =
+    Dict.get name state.entitySimpleNames
+        |> Maybe.andThen (\id -> Just <| updateEntityById id fn state)
+        |> Maybe.withDefault state
+
 ------ SYSTEM ------
 
 type alias System entity o msg =
