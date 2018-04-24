@@ -4,6 +4,7 @@ import Data.State exposing (..)
 import ECS
 import ECS.Entity exposing (..)
 import ECS.Components.Simple exposing (..)
+import ECS.Components.Collision exposing (..)
 import ECS.Components.PlayerController exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import Resource
@@ -27,6 +28,8 @@ entities model =
                                     , numberOfFrames = 25
                                     , duration = 1
                                     , pivot = (0.5, 0)
+                                    , hitboxes =
+                                        [ [ Hurtbox (Rect (0.1,0) (0.6,0.9)) ] ]
                                     }
                                 , { animationInit
                                     | name = "running"
@@ -34,6 +37,8 @@ entities model =
                                     , numberOfFrames = 23
                                     , duration = 0.8
                                     , pivot = (0.5, 0)
+                                    , hitboxes =
+                                        [ [ Hurtbox (Rect (0.2,0) (0.6,0.8)) ] ]
                                     }
                                 , { animationInit
                                     | name = "attack"
@@ -41,6 +46,27 @@ entities model =
                                     , numberOfFrames = 15
                                     , duration = 0.25
                                     , pivot = (0.35, 0)
+                                    , hitboxes =
+                                        List.repeat 6 [ Hurtbox (Rect (0, 0.05) (0.3, 0.75)) ]
+                                        ++
+                                            [[ Hurtbox (Rect (0.1, 0.05) (0.4, 0.70))
+                                            , Hitbox (Rect (0.4, 0.5) (0.65, 1))
+                                            ]]
+                                        ++
+                                            [[ Hurtbox (Rect (0.1, 0.05) (0.45, 0.70))
+                                            , Hitbox (Rect (0.4, 0.3) (0.9, 0.8))
+                                            ]]
+                                        ++
+                                            [[ Hurtbox (Rect (0.1, 0.05) (0.45, 0.70))
+                                            , Hitbox (Rect (0.4, 0.3) (1, 0.6))
+                                            ]]
+                                        ++ List.repeat 2
+                                            [ Hurtbox (Rect (0.1, 0.05) (0.45, 0.6))
+                                            , Hitbox (Rect (0.4, 0) (0.9, 0.3))
+                                            ]
+                                        ++ [[ Hurtbox (Rect (0.05, 0.05) (0.45, 0.7)) ]]
+
+
                                     }
                                 ] model) )
         |> ECS.addEntity ( noComponents
@@ -54,6 +80,8 @@ entities model =
                                     , numberOfFrames = 25
                                     , duration = 1
                                     , pivot = (0.5, 0)
+                                    , hitboxes =
+                                        [ [ Hurtbox (Rect (0.1,0) (0.6,0.9)) ] ]
                                     }
                                 ] model) )
         |> ECS.addEntity ( noComponents -- ground

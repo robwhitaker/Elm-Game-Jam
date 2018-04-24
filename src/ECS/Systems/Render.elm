@@ -2,14 +2,18 @@ module ECS.Systems.Render exposing (render)
 
 import ECS
 import ECS.Components.Simple exposing (..)
+import ECS.Components.Collision exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import Resource
 import Data.State exposing (State, System)
+import Utils.SelectionList as SL
 
 import Dict
 import Html exposing (Html)
 import Game.TwoD as Game
 import Game.TwoD.Render as Render
+import Color
+import Vector3 as V3
 
 render : State -> Html.Html msg
 render model =
@@ -28,10 +32,10 @@ render model =
             , scrollSpeed = (0.01, 0.01)
             }
         ]
-    << List.filterMap (\entity ->
+    << List.concat << List.filterMap (\entity ->
         let shape =
             Maybe.map2 (\(Position pos) (Graphic w h color) ->
-                Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) }
+                [ Render.shapeZ Render.rectangle { color = color, position = pos, size = (w,h) } ]
             ) entity.position entity.graphic
         in
             case shape of
@@ -44,17 +48,33 @@ render model =
                                 Just runningAnimation ->
                                     let animation = runningAnimation.currentAnimation
                                     in
-                                        Just <| Render.manuallyManagedAnimatedSpriteWithOptions
-                                            { texture = Resource.getTexture texturePath model
-                                            , position = pos
-                                            , size = animation.size
-                                            , bottomLeft = animation.bottomLeft
-                                            , topRight = animation.topRight
-                                            , rotation = animation.rotation
-                                            , pivot = animation.pivot
-                                            , numberOfFrames = animation.numberOfFrames
-                                            , currentFrame = runningAnimation.currentFrame
-                                            }
+                                        Just <|
+                                            flip List.map (Maybe.withDefault [] (Maybe.map SL.selected animation.hitboxes))
+                                                (\hbox ->
+                                                    let (color, rect) =
+                                                        case hbox of
+                                                            Hurtbox rect -> (Color.blue, rect)
+                                                            Hitbox rect -> (Color.red, rect)
+                                                        whbox = worldRect pos animation.size animation.pivot rect
+                                                    in
+                                                        Render.shapeZ Render.rectangle
+                                                            { color = color
+                                                            , position = whbox.position
+                                                            , size = whbox.size
+                                                            }
+                                                )
+                                            ++ [ Render.manuallyManagedAnimatedSpriteWithOptions
+                                                { texture = Resource.getTexture texturePath model
+                                                , position = pos
+                                                , size = animation.size
+                                                , bottomLeft = animation.bottomLeft
+                                                , topRight = animation.topRight
+                                                , rotation = animation.rotation
+                                                , pivot = animation.pivot
+                                                , numberOfFrames = animation.numberOfFrames
+                                                , currentFrame = runningAnimation.currentFrame
+                                                }
+                                            ]
                     ) entity.position entity.spritesheet |> Maybe.withDefault Nothing
     )
     -- Render.shapeZ doesn't seem to work, so we need to sort manually

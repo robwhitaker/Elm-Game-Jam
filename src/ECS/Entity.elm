@@ -2,6 +2,7 @@ module ECS.Entity exposing (..)
 
 import ECS
 import ECS.Components.Simple exposing (..)
+import ECS.Components.Collision exposing (Collision)
 import ECS.Components.Spritesheet exposing (Spritesheet)
 import ECS.Components.PlayerController exposing (PlayerController)
 
@@ -14,6 +15,7 @@ type alias Entity =
     , graphic : Maybe Graphic
     , direction : Maybe Direction
     , spritesheet : Maybe Spritesheet
+    , collision : Maybe Collision
     }
 
 noComponents : Entity
@@ -24,6 +26,7 @@ noComponents =
     , graphic = Nothing
     , direction = Nothing
     , spritesheet = Nothing
+    , collision = Nothing
     }
 
 ---- UPDATER FUNCTIONS ----
@@ -45,3 +48,6 @@ direction_ f cSet = { cSet | direction = f cSet.direction }
 
 spritesheet_ : Updater Spritesheet
 spritesheet_ f cSet = { cSet | spritesheet = f cSet.spritesheet }
+
+collision_ : Updater Collision
+collision_ f cSet = { cSet | collision = f cSet.collision }

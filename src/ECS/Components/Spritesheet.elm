@@ -5,7 +5,9 @@ import Time exposing (Time)
 import Vector2 as V2 exposing (Float2)
 import WebGL.Texture as Texture
 
+import ECS.Components.Collision as Collision
 import Resource exposing (ResourceDB)
+import Utils.SelectionList as SL exposing (SelectionList)
 
 type Spritesheet = Spritesheet String (Maybe RunningAnimation) (Dict String Animation) -- texturePath runningAnimation animations
 
@@ -20,6 +22,7 @@ type alias Animation =
     , numberOfFrames : Int
     , duration : Time
     , loop : AnimationLoop
+    , hitboxes : Maybe (SelectionList (List Collision.Hitbox))
     }
 
 type alias RunningAnimation =
@@ -38,7 +41,10 @@ type alias AnimationInit =
     , loop : AnimationLoop
     , pivot : Float2
     , rotation : Float
+    , hitboxes : List (List Collision.Hitbox)
     }
+
+
 
 animationInit : AnimationInit
 animationInit =
@@ -50,6 +56,7 @@ animationInit =
     , loop = Loop
     , pivot = (0, 0)
     , rotation = 0
+    , hitboxes = []
     }
 
 getRunningAnimation : Spritesheet -> Maybe RunningAnimation
@@ -84,6 +91,7 @@ makeSpritesheet filePath currentAnimation animations resourceDB =
                                 , numberOfFrames = anim.numberOfFrames
                                 , duration = anim.duration
                                 , loop = anim.loop
+                                , hitboxes = Maybe.map2 SL.fromList (List.head anim.hitboxes) (List.tail anim.hitboxes)
                                 } animDict
                             )
                     ) (0, Dict.empty) animations
