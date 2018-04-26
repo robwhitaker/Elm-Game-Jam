@@ -36,10 +36,15 @@ getEntityById : Id -> State entity o -> Maybe entity
 getEntityById id state =
     Dict.get id state.entities
 
+-- get an entity's id by its simple name
+getEntityIdBySimpleName : String -> State entity o -> Maybe Id
+getEntityIdBySimpleName name state =
+    Dict.get name state.entitySimpleNames
+
 -- get an entity by its simple name
 getEntityBySimpleName : String -> State entity o -> Maybe entity
 getEntityBySimpleName name state =
-    Dict.get name state.entitySimpleNames
+    getEntityIdBySimpleName name state
         |> Maybe.andThen (flip getEntityById state)
 
 -- remove an entity by its id. Does not currently clean up the simple name.

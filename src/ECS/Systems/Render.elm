@@ -13,6 +13,7 @@ import Html exposing (Html)
 import Game.TwoD as Game
 import Game.TwoD.Render as Render
 import Color
+import Vector2 as V2
 import Vector3 as V3
 
 render : State -> Html.Html msg
@@ -53,8 +54,8 @@ render model =
                                                 (\hbox ->
                                                     let (color, rect) =
                                                         case hbox of
-                                                            Hurtbox rect -> (Color.blue, rect)
-                                                            Hitbox rect -> (Color.red, rect)
+                                                            Hitbox rect (Hurtbox _) -> (Color.rgba 0 0 255 0.1, rect)
+                                                            Hitbox rect (Damagebox _) -> (Color.rgba 255 0 0 0.1, rect)
                                                         whbox = worldRect pos animation.size animation.pivot rect
                                                     in
                                                         Render.shapeZ Render.rectangle
@@ -75,6 +76,24 @@ render model =
                                                 , currentFrame = runningAnimation.currentFrame
                                                 }
                                             ]
+                                            ++ case entity.hp of
+                                                Nothing -> []
+                                                Just (HP hp maxHP) ->
+                                                    [ Render.shapeWithOptions Render.rectangle
+                                                        { color = Color.black
+                                                        , position = (V3.getX pos, V3.getY pos + V2.getY animation.size - 2, V3.getZ pos)
+                                                        , size = (50, 11)
+                                                        , rotation = 0
+                                                        , pivot = (0.5, 0)
+                                                        }
+                                                    , Render.shapeWithOptions Render.rectangle
+                                                        { color = Color.red
+                                                        , position = (V3.getX pos, V3.getY pos + V2.getY animation.size, V3.getZ pos)
+                                                        , size = (45*hp/maxHP, 7)
+                                                        , rotation = 0
+                                                        , pivot = (0.5, 0)
+                                                        }
+                                                    ]
                     ) entity.position entity.spritesheet |> Maybe.withDefault Nothing
     )
     -- Render.shapeZ doesn't seem to work, so we need to sort manually

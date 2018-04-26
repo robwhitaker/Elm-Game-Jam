@@ -13,7 +13,7 @@ physics dt =
             |> ECS.andWith .physics
             |> ECS.processEntity
                 (\(Position (x, y, z)) (Physics (vx, vy) mGravity) ->
-                    let vyNew = vy + (Maybe.withDefault 0 mGravity * dt)
+                    let vyNew = vy + ((Maybe.withDefault 0 mGravity + (15-y)*10) * dt)
                         xNew = vx * dt + x
                         yNew = vyNew * dt + y
                         (y_,vy_) = if yNew <= 15 then (15, 0) else (yNew, vyNew)

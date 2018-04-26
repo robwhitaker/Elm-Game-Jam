@@ -35,16 +35,13 @@ playerControl dt =
                                     _ -> p
                                 )
                             |> (\p -> -- jumping
-                                case p.playerState of
-                                    Attacking _ -> p
-                                    _ ->
-                                        if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
-                                            then { p | velocity = (V2.getX p.velocity, 1500) }
-                                            else p
+                                if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
+                                    then { p | velocity = (V2.getX p.velocity, 2000), playerState = if isAttacking p.playerState then Attacking 0 else p.playerState }
+                                    else p
                                 )
                             >> (\p -> -- fast falling
-                                if V3.getY p.position > 15 && V2.getY p.velocity <= 0 && List.member (Key 40 Pressed) keys
-                                    then { p | velocity = (V2.getX p.velocity, -1500) }
+                                if V3.getY p.position > 15 && V2.getY p.velocity <= 1250 && List.member (Key 40 Pressed) keys
+                                    then { p | velocity = (V2.getX p.velocity, min (V2.getY p.velocity - 500) -2500) }
                                     else p
                                 )
                             >> (\p -> -- attacking
@@ -65,10 +62,21 @@ playerControl dt =
                                             Just (Key 37 _) -> Just Left
                                             Just (Key 39 _) -> Just Right
                                             _               -> Nothing
+                                    skidSpeed x = (V2.getX p.velocity)/x
+                                    skidToHalt x =
+                                        if abs (skidSpeed x) < 10
+                                            then 0
+                                            else skidSpeed x
                                 in
                                     case maybeInputDir of
                                         Nothing ->
-                                            { p | velocity = (0, V2.getY p.velocity) }
+                                            { p | velocity =
+                                                ( if V3.getY p.position <= 15
+                                                    then skidToHalt 1.25
+                                                    else skidToHalt 1.01
+                                                , V2.getY p.velocity
+                                                )
+                                            }
                                         Just inputDir ->
                                             let facing =
                                                     if V3.getY p.position > 15 || isAttacking p.playerState
@@ -76,7 +84,7 @@ playerControl dt =
                                                         else inputDir
                                                 newVelX =
                                                     if isAttacking p.playerState && V3.getY p.position <= 15
-                                                        then 0
+                                                        then skidToHalt 1.02
                                                         else turn inputDir moveSpeed
                                                 newPState =
                                                     if newVelX /= 0 && not (isAttacking p.playerState)
@@ -89,7 +97,7 @@ playerControl dt =
                                                 }
                                 )
                             >> (\p ->
-                                if V2.getX p.velocity == 0 && not (isAttacking p.playerState)
+                                if abs (V2.getX p.velocity) < 750 && not (isAttacking p.playerState)
                                     then { p | playerState = Idle }
                                     else p
                                 )

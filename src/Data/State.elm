@@ -1,8 +1,9 @@
 module Data.State exposing
     ( System, State, empty )
 
-import ECS
+import ECS exposing (Id)
 import ECS.Entity exposing (Entity)
+import ECS.Components.Collision exposing (HitboxType)
 import KeyboardInput exposing (KeyboardInputs)
 import Resource
 
