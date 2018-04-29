@@ -20,6 +20,7 @@ type alias Entity =
     , hp : Maybe HP
     , aiController : Maybe AIController
     , attackCD : Maybe AttackCD
+    , speed : Maybe Speed
     }
 
 noComponents : Entity
@@ -34,6 +35,7 @@ noComponents =
     , hp = Nothing
     , aiController = Nothing
     , attackCD = Nothing
+    , speed = Nothing
     }
 
 ---- UPDATER FUNCTIONS ----
@@ -67,3 +69,6 @@ aiController_ f cSet = { cSet | aiController = f cSet.aiController }
 
 attackCD_ : Updater AttackCD
 attackCD_ f cSet = { cSet | attackCD = f cSet.attackCD }
+
+speed_ : Updater Speed
+speed_ f cSet = { cSet | speed = f cSet.speed }

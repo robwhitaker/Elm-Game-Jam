@@ -33,20 +33,21 @@ swordsmanAI dt state entity =
                 |> ECS.with .position
                 |> ECS.andWith .direction
                 |> ECS.andWith .attackCD
+                |> ECS.andWith .speed
                 |> ECS.andWith .spritesheet
                 |> ECS.andWith (always player.position)
                 |> ECS.andWith (always player.direction)
                 |> ECS.andWith (always player.spritesheet)
                 |> ECS.processEntity
-                    (\(Position (ex, ey,_)) edir (AttackCD cd maxCD as atkcd) eSpritesheet (Position (px,py,_)) pdir pSpritesheet ->
+                    (\(Position (ex, ey,_)) edir (AttackCD cd maxCD as atkcd) (Speed eSpeed) eSpritesheet (Position (px,py,_)) pdir pSpritesheet ->
                         let dirShouldBe = toDir (px - ex)
-                            moveSpeed = 250
+                            moveSpeed = eSpeed
                             cdLeft = cd - dt
                         in
                             getRunningAnimation eSpritesheet
                                 |> Maybe.andThen (\ra ->
                                     (\e -> Just (state, Just e, Cmd.none))
-                                        <| if abs (px - ex) > 50 && ra.name /= "attack"
+                                        <| if abs (px - ex) > 75 && ra.name /= "attack"
                                             then
                                                 entity
                                                     |> ECS.update physics_ (Maybe.map (\(Physics (vx, vy) g) ->

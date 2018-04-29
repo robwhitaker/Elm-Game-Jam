@@ -64,7 +64,8 @@ render model =
                                                             , size = whbox.size
                                                             }
                                                 )
-                                            ++ [ Render.manuallyManagedAnimatedSpriteWithOptions
+                                            ++
+                                            [ Render.manuallyManagedAnimatedSpriteWithOptions
                                                 { texture = Resource.getTexture texturePath model
                                                 , position = pos
                                                 , size = animation.size

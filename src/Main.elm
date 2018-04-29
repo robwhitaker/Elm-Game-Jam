@@ -1,9 +1,11 @@
 module Main exposing (main)
 
 import Html exposing (Html)
+import Html.Attributes exposing (..)
 import Color
 import Dict exposing (Dict)
 import Task
+import Random
 
 import AnimationFrame
 import Window
@@ -18,6 +20,7 @@ import ECS.Systems as Systems
 import Resource
 import KeyboardInput
 import Init
+import EnemySpawner
 
 main : Program Never State Msg
 main =
@@ -25,7 +28,9 @@ main =
         { init =
             ( empty
             , Cmd.batch
-                [ Task.perform WindowResize Window.size ]
+                [ Task.perform WindowResize Window.size
+                , Random.generate (RandomSeed << Random.initialSeed) (Random.int Random.minInt Random.maxInt)
+                ]
             ) |> Init.resources
         , view = view
         , update = update
@@ -49,7 +54,6 @@ update msg state =
                         , Systems.animation
                         ]
                 newEntities = newState.entities
-                --TODO: this should be handled via a system
                 (Position playerPos) =
                     case Dict.get 0 newEntities of
                         Nothing -> Position (0,0,0)
@@ -58,7 +62,7 @@ update msg state =
                     \(x, y, _) ->
                         (x*0.8, 300+y*0.2)
             in
-                ({ newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
+                (EnemySpawner.runSpawner dt { newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
 
         KeyboardEvent e ->
             ({ state | keys = KeyboardInput.update e state.keys }, Cmd.none)
@@ -74,7 +78,22 @@ update msg state =
                     then (Init.entities { state | resourceLoader = newLoader }, Cmd.none)
                     else ({ state | resourceLoader = newLoader }, Cmd.none)
 
+        RandomSeed seed ->
+            ({ state | enemySpawner = EnemySpawner.newWave state.wave <| EnemySpawner.updateSeed seed state.enemySpawner }
+            , Cmd.none
+            )
+
         NoOp -> (state, Cmd.none)
 
 view : State -> Html msg
-view = Systems.render
+view state =
+    Html.div
+        [ style [("width", "100vw"), ("height","100vh"), ("position", "relative")] ]
+        [ Systems.render state
+        , Html.div
+            [ style [("position", "absolute"), ("top", "0"), ("left", "0")] ]
+            [ Html.p [] [ Html.text <| "Wave: " ++ toString state.wave ]
+            , Html.p [] [ Html.text <| "Enemies remaining: " ++ toString (EnemySpawner.getTotalRemainingEnemies state) ]
+            ]
+        ]
+

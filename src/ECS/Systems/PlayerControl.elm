@@ -21,10 +21,11 @@ playerControl dt =
                 |> ECS.with .position
                 |> ECS.andWith .physics
                 |> ECS.andWith .direction
+                |> ECS.andWith .speed
                 |> ECS.andWith .spritesheet
                 |> ECS.andWith .playerController
                 |> ECS.processEntity
-                    (\(Position pos_) (Physics vel mGravity) direction (Spritesheet _ runningAnimation animations as spritesheet) (PlayerController playerState) ->
+                    (\(Position pos_) (Physics vel mGravity) direction (Speed moveSpeed) (Spritesheet _ runningAnimation animations as spritesheet) (PlayerController playerState) ->
                         { position = pos_, velocity = vel, playerState = playerState, direction = direction }
                             |> (\p -> -- clear/update controls from last inputs
                                 case p.playerState of
@@ -56,11 +57,13 @@ playerControl dt =
                                     else p
                                 )
                             >> (\p -> -- horizontal movement
-                                let moveSpeed = 750
+                                let border = 3100
                                     maybeInputDir =
                                         case List.head (List.filter (\(Key n _) -> n == 37 || n == 39) keys) of
-                                            Just (Key 37 _) -> Just Left
-                                            Just (Key 39 _) -> Just Right
+                                            Just (Key 37 _) ->
+                                                if V3.getX p.position <= -border then Nothing else Just Left
+                                            Just (Key 39 _) ->
+                                                if V3.getX p.position >= border then Nothing else Just Right
                                             _               -> Nothing
                                     skidSpeed x = (V2.getX p.velocity)/x
                                     skidToHalt x =
@@ -72,8 +75,8 @@ playerControl dt =
                                         Nothing ->
                                             { p | velocity =
                                                 ( if V3.getY p.position <= 15
-                                                    then skidToHalt 1.25
-                                                    else skidToHalt 1.01
+                                                    then skidToHalt 1.3
+                                                    else skidToHalt 1.1
                                                 , V2.getY p.velocity
                                                 )
                                             }
@@ -84,7 +87,7 @@ playerControl dt =
                                                         else inputDir
                                                 newVelX =
                                                     if isAttacking p.playerState && V3.getY p.position <= 15
-                                                        then skidToHalt 1.02
+                                                        then skidToHalt 1.1
                                                         else turn inputDir moveSpeed
                                                 newPState =
                                                     if newVelX /= 0 && not (isAttacking p.playerState)
@@ -97,7 +100,7 @@ playerControl dt =
                                                 }
                                 )
                             >> (\p ->
-                                if abs (V2.getX p.velocity) < 750 && not (isAttacking p.playerState)
+                                if abs (V2.getX p.velocity) < moveSpeed && not (isAttacking p.playerState)
                                     then { p | playerState = Idle }
                                     else p
                                 )

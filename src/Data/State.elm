@@ -1,15 +1,16 @@
 module Data.State exposing
-    ( System, State, empty )
+    ( System, State, empty, EnemySpawner)
 
 import ECS exposing (Id)
 import ECS.Entity exposing (Entity)
-import ECS.Components.Collision exposing (HitboxType)
 import KeyboardInput exposing (KeyboardInputs)
 import Resource
 
 import Dict
 import Game.TwoD.Camera as Camera exposing (Camera)
 import Vector2 exposing (Vec2)
+import Random exposing (Seed)
+import Time exposing (Time)
 
 -- Some specialized types
 
@@ -24,7 +25,34 @@ type alias Model =
         { keys : KeyboardInputs
         , camera : Camera
         , windowSize : Vec2 Int
+        , gameState : GameState
+        , wave : Int
+        , enemySpawner : EnemySpawner
         }
+
+type GameState
+    = Loading
+    | Start
+    | Playing
+    | WaveTransition Time
+    | GameOver
+
+type alias EnemySpawner =
+    { enemiesRemaining : Int
+    , enemiesOnScreen : Int
+    , maxOnScreen : Int
+    , spawnCD : Time
+    , randomSeed : Seed
+    }
+
+emptySpawner : EnemySpawner
+emptySpawner =
+    { enemiesRemaining = 0
+    , enemiesOnScreen = 0
+    , maxOnScreen = 0
+    , spawnCD = 0
+    , randomSeed = Random.initialSeed 0
+    }
 
 empty : State
 empty =
@@ -35,4 +63,7 @@ empty =
     , camera = Camera.fixedWidth 1280 (0,0)
     , windowSize = (0, 0)
     , resourceLoader = Resource.loader
+    , wave = 1
+    , enemySpawner = emptySpawner
+    , gameState = Loading
     }
