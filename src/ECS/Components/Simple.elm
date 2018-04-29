@@ -8,6 +8,7 @@ type Position = Position Float3
 type Physics = Physics Float2 (Maybe Float)
 type Graphic = Graphic Float Float Color
 type HP = HP Float Float -- current max
+type AttackCD = AttackCD Float Float
 
 type Direction = Left | Right
 

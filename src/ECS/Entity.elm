@@ -5,6 +5,7 @@ import ECS.Components.Simple exposing (..)
 import ECS.Components.Collision exposing (Collision)
 import ECS.Components.Spritesheet exposing (Spritesheet)
 import ECS.Components.PlayerController exposing (PlayerController)
+import ECS.Components.AIController exposing (AIController)
 
 type alias Updater a = ECS.Updater a Entity
 
@@ -17,6 +18,8 @@ type alias Entity =
     , spritesheet : Maybe Spritesheet
     , collision : Maybe Collision
     , hp : Maybe HP
+    , aiController : Maybe AIController
+    , attackCD : Maybe AttackCD
     }
 
 noComponents : Entity
@@ -29,6 +32,8 @@ noComponents =
     , spritesheet = Nothing
     , collision = Nothing
     , hp = Nothing
+    , aiController = Nothing
+    , attackCD = Nothing
     }
 
 ---- UPDATER FUNCTIONS ----
@@ -56,3 +61,9 @@ collision_ f cSet = { cSet | collision = f cSet.collision }
 
 hp_ : Updater HP
 hp_ f cSet = { cSet | hp = f cSet.hp }
+
+aiController_ : Updater AIController
+aiController_ f cSet = { cSet | aiController = f cSet.aiController }
+
+attackCD_ : Updater AttackCD
+attackCD_ f cSet = { cSet | attackCD = f cSet.attackCD }

@@ -32,7 +32,7 @@ animation dt =
                                 else
                                     case ca.loop of
                                         Once ->
-                                            Nothing
+                                            Just ra
                                         Loop ->
                                             Just
                                                 { ra
