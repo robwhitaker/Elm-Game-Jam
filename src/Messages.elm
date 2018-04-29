@@ -14,4 +14,5 @@ type Msg
     | WindowResize Size
     | LoadTexture Resource.LoaderMsg
     | RandomSeed Seed
+    | NewGame
 

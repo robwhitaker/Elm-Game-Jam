@@ -1,5 +1,5 @@
 module Data.State exposing
-    ( System, State, empty, EnemySpawner)
+    ( System, State, empty, EnemySpawner, GameState(..))
 
 import ECS exposing (Id)
 import ECS.Entity exposing (Entity)

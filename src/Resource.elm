@@ -14,6 +14,7 @@ type alias ResourceDB o =
 type alias Loader =
     { textureDB : Dict FilePath Texture
     , pending : Int
+    , total : Int
     }
 
 type LoaderMsg = LoadTexture (Result Error (FilePath, Texture))
@@ -38,13 +39,14 @@ loader : Loader
 loader =
     { textureDB = Dict.empty
     , pending = 0
+    , total = 0
     }
 
 initLoader : List (Cmd msg) -> (ResourceDB o, Cmd msg) -> (ResourceDB o, Cmd msg)
 initLoader cmds (db, c) =
     let loader = db.resourceLoader
     in
-        ( { db | resourceLoader = { loader | pending = List.length cmds } }
+        ( { db | resourceLoader = { loader | pending = List.length cmds, total = List.length cmds } }
         , Cmd.batch (c :: cmds)
         )
 

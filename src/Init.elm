@@ -12,10 +12,11 @@ import Resource
 import Messages exposing (..)
 
 import Color
+import Dict
 
 entities : State -> State
-entities model =
-    model
+entities state =
+    { state | entities = Dict.empty, entitySimpleNames = Dict.empty }
         |> ECS.addEntityWithSimpleName (Just "player") ( noComponents
                         |> ECS.set playerController_ (PlayerController Idle)
                         |> ECS.set position_ (Position (0, 0, 1))
@@ -69,16 +70,11 @@ entities model =
                                             , Hitbox (Rect (0.4, 0) (0.9, 0.3)) (Damagebox 1)
                                             ]
                                         ++ [[ Hitbox (Rect (0.05, 0.05) (0.45, 0.7)) (Hurtbox 1) ]]
-
-
                                     }
-                                ] model) )
+                                ] state) )
         |> ECS.addEntity ( noComponents -- ground
                         |> ECS.set position_ (Position (-5000, -975, 0))
                         |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )
-        |> ECS.addEntity ( noComponents -- ground
-                        |> ECS.set position_ (Position (0, 0, 1))
-                        |> ECS.set graphic_ (Graphic 1 1000 Color.red) )
 
 resources : (Resource.ResourceDB o, Cmd Msg) -> (Resource.ResourceDB o, Cmd Msg)
 resources =
