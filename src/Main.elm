@@ -47,11 +47,16 @@ update msg state =
     case msg of
         Tick dt ->
             case state.gameState of
-                Playing ->
+                Loading -> (state, Cmd.none)
+                _ ->
                     let (newState, cmds) =
-                            ECS.runSystems dt state
-                                [ Systems.playerControl
-                                , Systems.ai
+                            ECS.runSystems dt state <|
+                                (case state.gameState of
+                                    Playing -> [ Systems.playerControl ]
+                                    WaveTransition _ -> [ Systems.playerControl ]
+                                    _ -> [])
+                                ++
+                                [ Systems.ai
                                 , Systems.collision
                                 , Systems.physics
                                 , Systems.animation
@@ -63,29 +68,42 @@ update msg state =
                                 Just player -> Maybe.withDefault (Position (0,0,0)) player.position
                         cameraPos =
                             \(x, y, _) ->
-                                (x*0.8, 300+y*0.2)
+                                (x*0.8, 250+y*0.2)
                     in
                         if player == Nothing
                             then ({ newState | gameState = GameOver }, cmds )
-                        else if EnemySpawner.getTotalRemainingEnemies newState < 1
+                        else if EnemySpawner.getTotalRemainingEnemies newState < 1 && state.gameState == Playing
                             then
                                 ({ newState
                                     | gameState = WaveTransition 5
-                                    , wave = newState.wave + 1
-                                    , enemySpawner = EnemySpawner.newWave (newState.wave + 1) newState.enemySpawner
+                                    , camera = Camera.moveTo (cameraPos playerPos) state.camera
                                     }
                                 , cmds
                                 )
+                        else if state.gameState == Playing
+                            then
+                                (EnemySpawner.runSpawner dt { newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
                         else
-                            (EnemySpawner.runSpawner dt { newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
-                WaveTransition duration ->
-                    ( if duration - dt > 0
-                        then { state | gameState = WaveTransition (duration - dt) }
-                        else { state | gameState = Playing}
-                    , Cmd.none
-                    )
-                _ ->
-                    (state, Cmd.none)
+                            case state.gameState of
+                                WaveTransition duration ->
+                                    if duration - dt > 0
+                                        then
+                                            ({ newState
+                                                | gameState = WaveTransition (duration - dt)
+                                                , camera = Camera.moveTo (cameraPos playerPos) state.camera
+                                                }
+                                            , cmds
+                                            )
+                                        else
+                                            ({ newState
+                                                | gameState = Playing
+                                                , wave = newState.wave + 1
+                                                , enemySpawner = EnemySpawner.newWave (newState.wave + 1) newState.enemySpawner
+                                                , camera = Camera.moveTo (cameraPos playerPos) state.camera
+                                                }
+                                            , cmds
+                                            )
+                                _ -> ({ newState | camera = Camera.moveTo (cameraPos playerPos) state.camera }, cmds)
 
         KeyboardEvent e ->
             ({ state | keys = KeyboardInput.update e state.keys }, Cmd.none)
@@ -97,11 +115,11 @@ update msg state =
             let newLoader = Resource.updateLoader loaderMsg state.resourceLoader
             in
                 if newLoader.pending <= 0
-                    then ({ state | resourceLoader = newLoader, gameState = Start }, Cmd.none)
+                    then (Init.entities { state | resourceLoader = newLoader, gameState = Start }, Cmd.none)
                     else ({ state | resourceLoader = newLoader }, Cmd.none)
 
         NewGame ->
-            ( Init.entities { state | wave = 1, gameState = WaveTransition 5, enemySpawner = EnemySpawner.newWave 1 state.enemySpawner }
+            ( Init.entities { state | wave = 0, gameState = WaveTransition 5, enemySpawner = EnemySpawner.newWave 1 state.enemySpawner }
             , Cmd.none
             )
 
@@ -115,25 +133,55 @@ update msg state =
 view : State -> Html Msg
 view state =
     Html.div
-        [ style [("width", "100vw"), ("height","100vh"), ("position", "relative")] ]
+        [ class "game-container" ]
         <| case state.gameState of
-            Loading -> [ Html.text ("Loading: " ++ toString (toFloat (state.resourceLoader.total - state.resourceLoader.pending) / toFloat state.resourceLoader.total * 100) ++ "%") ]
-            Start ->
-                [ Html.button [ onClick NewGame ] [ Html.text "Play" ] ]
-            GameOver ->
-                [ Html.text "Game Over"
-                , Html.button [ onClick NewGame ] [ Html.text "Try Again?" ]
-                ]
+            Loading ->
+                [ Html.div
+                    [ class "loading vcenter" ]
+                    [ Html.text
+                        ("Loading: "
+                        ++ toString (toFloat (state.resourceLoader.total - state.resourceLoader.pending) / toFloat state.resourceLoader.total * 100)
+                        ++ "%")
+                    ] ]
             _ ->
                 [ Systems.render state
                 , Html.div
-                    [ style [("position", "absolute"), ("top", "0"), ("left", "0")] ]
-                    [ Html.p [] [ Html.text <| "Wave: " ++ toString state.wave ]
-                    , Html.p [] [ Html.text <| "Enemies remaining: " ++ toString (EnemySpawner.getTotalRemainingEnemies state) ]
-                    , case state.gameState of
-                        WaveTransition duration ->
-                            Html.p [] [ Html.text <| "Next wave in: " ++ toString duration ]
-                        _ -> Html.text ""
+                    [ classList [("wave-info", True), ("hidden", state.gameState == Start)] ]
+                    [ Html.div
+                        [ class "wave-info-box"]
+                        [ Html.h2 [] [ Html.text "Wave:" ]
+                        , Html.p [] [ Html.text <| toString state.wave ]
+                        ]
+                    , Html.div
+                        [ class "wave-info-box" ]
+                        [ Html.h2 [] [ Html.text "Remaining Enemies:" ]
+                        , Html.p [] [ Html.text <| toString (EnemySpawner.getTotalRemainingEnemies state) ]
+                        ]
                     ]
+                , case state.gameState of
+                    Start ->
+                        Html.div
+                            [ class "center-modal" ]
+                            [ Html.h2 [] [ Html.text "Of Stick Figures and Swords" ]
+                            , Html.hr [] []
+                            , Html.p [ class "info-text" ] [ Html.text "Arrow keys to move. X to attack." ]
+                            , Html.button [ onClick NewGame ] [ Html.text "Start" ]
+                            ]
+                    WaveTransition duration ->
+                        Html.div
+                            [ class "center-modal" ]
+                            [ Html.h2 [] [ Html.text "Next wave starting in:" ]
+                            , Html.hr [] []
+                            , Html.p [ class "big-text" ] [ Html.text <| toString <| ceiling duration ]
+                            ]
+                    GameOver ->
+                        Html.div
+                            [ class "center-modal" ]
+                            [ Html.h2 [] [ Html.text "Game Over" ]
+                            , Html.hr [] []
+                            , Html.p [ class "info-text" ] [ Html.text "Nice." ]
+                            , Html.button [ onClick NewGame ] [ Html.text "Try again?" ]
+                            ]
+                    _ ->
+                        Html.span [ class "hidden" ] []
                 ]
-

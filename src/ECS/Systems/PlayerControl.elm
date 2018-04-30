@@ -5,7 +5,7 @@ import ECS.Entity exposing (..)
 import ECS.Components.Simple exposing (..)
 import ECS.Components.PlayerController exposing (..)
 import ECS.Components.Spritesheet exposing (..)
-import Data.State exposing (System)
+import Data.State exposing (System, baseHeight)
 import KeyboardInput exposing (..)
 
 import Dict
@@ -36,12 +36,12 @@ playerControl dt =
                                     _ -> p
                                 )
                             |> (\p -> -- jumping
-                                if V3.getY p.position <= 15 && List.member (Key 38 Pressed) keys
+                                if V3.getY p.position <= baseHeight && List.member (Key 38 Pressed) keys
                                     then { p | velocity = (V2.getX p.velocity, 2000), playerState = if isAttacking p.playerState then Attacking 0 else p.playerState }
                                     else p
                                 )
                             >> (\p -> -- fast falling
-                                if V3.getY p.position > 15 && V2.getY p.velocity <= 1250 && List.member (Key 40 Pressed) keys
+                                if V3.getY p.position > baseHeight && V2.getY p.velocity <= 1250 && List.member (Key 40 Pressed) keys
                                     then { p | velocity = (V2.getX p.velocity, min (V2.getY p.velocity - 500) -2500) }
                                     else p
                                 )
@@ -74,7 +74,7 @@ playerControl dt =
                                     case maybeInputDir of
                                         Nothing ->
                                             { p | velocity =
-                                                ( if V3.getY p.position <= 15
+                                                ( if V3.getY p.position <= baseHeight
                                                     then skidToHalt 1.3
                                                     else skidToHalt 1.1
                                                 , V2.getY p.velocity
@@ -82,11 +82,11 @@ playerControl dt =
                                             }
                                         Just inputDir ->
                                             let facing =
-                                                    if V3.getY p.position > 15 || isAttacking p.playerState
+                                                    if V3.getY p.position > baseHeight || isAttacking p.playerState
                                                         then p.direction
                                                         else inputDir
                                                 newVelX =
-                                                    if isAttacking p.playerState && V3.getY p.position <= 15
+                                                    if isAttacking p.playerState && V3.getY p.position <= baseHeight
                                                         then skidToHalt 1.1
                                                         else turn inputDir moveSpeed
                                                 newPState =

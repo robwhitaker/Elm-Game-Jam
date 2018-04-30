@@ -1,5 +1,5 @@
 module Data.State exposing
-    ( System, State, empty, EnemySpawner, GameState(..))
+    ( System, State, empty, EnemySpawner, GameState(..), baseHeight)
 
 import ECS exposing (Id)
 import ECS.Entity exposing (Entity)
@@ -63,7 +63,11 @@ empty =
     , camera = Camera.fixedWidth 1280 (0,0)
     , windowSize = (0, 0)
     , resourceLoader = Resource.loader
-    , wave = 1
+    , wave = 0
     , enemySpawner = emptySpawner
     , gameState = Loading
     }
+
+-- magic number for baseline height
+baseHeight : Float
+baseHeight = 0

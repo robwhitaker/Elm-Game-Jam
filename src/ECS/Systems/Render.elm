@@ -22,17 +22,28 @@ render model =
     << (++)
         [ Render.parallaxScroll
             { z = -0.99
-            , texture = Resource.getTexture "/assets/img/temp_bg.png" model
-            , tileWH = (2,2)
+            , texture = Resource.getTexture "/assets/img/cloud-bg.png" model
+            , tileWH = (1,1)
             , scrollSpeed = (0.005, 0.005)
             }
         , Render.parallaxScroll
             { z = -0.98
-            , texture = Resource.getTexture "/assets/img/temp_bg.png" model
+            , texture = Resource.getTexture "/assets/img/terrible-trees.png" model
             , tileWH = (1,1)
             , scrollSpeed = (0.01, 0.01)
             }
+        , Render.spriteWithOptions
+            { texture = Resource.getTexture "/assets/img/ground.png" model
+            , position = (-5000, -975, 0)
+            , size = (10000, 1000)
+            , tiling = (20, 1)
+            , rotation = 0
+            , pivot = (0, 0)
+            }
         ]
+                -- |> ECS.addEntity ( noComponents -- ground
+                --         |> ECS.set position_ (Position (-5000, -975, 0))
+                --         |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )
     << List.concat << List.filterMap (\entity ->
         let shape =
             Maybe.map2 (\(Position pos) (Graphic w h color) ->
@@ -50,21 +61,21 @@ render model =
                                     let animation = runningAnimation.currentAnimation
                                     in
                                         Just <|
-                                            flip List.map (Maybe.withDefault [] (Maybe.map SL.selected animation.hitboxes))
-                                                (\hbox ->
-                                                    let (color, rect) =
-                                                        case hbox of
-                                                            Hitbox rect (Hurtbox _) -> (Color.rgba 0 0 255 0.1, rect)
-                                                            Hitbox rect (Damagebox _) -> (Color.rgba 255 0 0 0.1, rect)
-                                                        whbox = worldRect pos animation.size animation.pivot rect
-                                                    in
-                                                        Render.shapeZ Render.rectangle
-                                                            { color = color
-                                                            , position = whbox.position
-                                                            , size = whbox.size
-                                                            }
-                                                )
-                                            ++
+                                            -- flip List.map (Maybe.withDefault [] (Maybe.map SL.selected animation.hitboxes))
+                                            --     (\hbox ->
+                                            --         let (color, rect) =
+                                            --             case hbox of
+                                            --                 Hitbox rect (Hurtbox _) -> (Color.rgba 0 0 255 0.1, rect)
+                                            --                 Hitbox rect (Damagebox _) -> (Color.rgba 255 0 0 0.1, rect)
+                                            --             whbox = worldRect pos animation.size animation.pivot rect
+                                            --         in
+                                            --             Render.shapeZ Render.rectangle
+                                            --                 { color = color
+                                            --                 , position = whbox.position
+                                            --                 , size = whbox.size
+                                            --                 }
+                                            --     )
+                                            -- ++
                                             [ Render.manuallyManagedAnimatedSpriteWithOptions
                                                 { texture = Resource.getTexture texturePath model
                                                 , position = pos

@@ -72,13 +72,13 @@ entities state =
                                         ++ [[ Hitbox (Rect (0.05, 0.05) (0.45, 0.7)) (Hurtbox 1) ]]
                                     }
                                 ] state) )
-        |> ECS.addEntity ( noComponents -- ground
-                        |> ECS.set position_ (Position (-5000, -975, 0))
-                        |> ECS.set graphic_ (Graphic 10000 1000 Color.green) )
 
 resources : (Resource.ResourceDB o, Cmd Msg) -> (Resource.ResourceDB o, Cmd Msg)
 resources =
     Resource.initLoader
-        [ Resource.loadTexture LoadTexture "/assets/img/temp_bg.png"
+        [ Resource.loadTexture LoadTexture "/assets/img/cloud-bg.png"
+        , Resource.loadTexture LoadTexture "/assets/img/terrible-trees.png"
+        , Resource.loadTexture LoadTexture "/assets/img/ground.png"
         , Resource.loadTexture LoadTexture "/assets/img/player-spritesheet.png"
+        , Resource.loadTexture LoadTexture "/assets/img/e-swordsman-spritesheet.png"
         ]

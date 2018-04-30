@@ -47,7 +47,7 @@ runSpawner dt state =
                             |> Maybe.withDefault 0
                     spawnNumberGen = Random.int 0 <| min state.enemySpawner.enemiesRemaining (state.enemySpawner.maxOnScreen - enemiesOnScreen)
                     spawnLocationGen = Random.bool |> Random.map (\b -> if b then playerX-screenW/1.5 else playerX+screenW/1.5)
-                    eSpawnPosGen x = Random.float (x - 150) (x + 150) |> Random.map (\newX -> Position (newX, 15, 0.9))
+                    eSpawnPosGen x = Random.float (x - 150) (x + 150) |> Random.map (\newX -> Position (newX, baseHeight, 0.9))
                     eSpeedGen = Random.float 200 500
                     eAtkSpeedGen = Random.float 0.35 1
                     eAtkCDGen = Random.float 0.35 1
@@ -88,7 +88,7 @@ swordsman state pos moveSpeed attackSpeed attackCD =
         |> ECS.set collision_ (Collision Enemy)
         |> ECS.set attackCD_ (AttackCD 0 attackCD)
         |> ECS.set spritesheet_
-            (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
+            (makeSpritesheet "/assets/img/e-swordsman-spritesheet.png" "idle"
                 [ { animationInit
                     | name = "idle"
                     , stripDimensions = (1975, 154)
