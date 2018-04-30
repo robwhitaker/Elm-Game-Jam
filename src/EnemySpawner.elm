@@ -90,7 +90,7 @@ swordsman state pos moveSpeed attackSpeed attackCD =
         |> ECS.set audioPlayer_ (emptyAudioPlayer
                 |> registerClip "gothit" 1 False False playerHits
                 |> registerClip "attack" 1 False False (if attackSpeed <= 0.5 then fastSwordSwishes else slowSwordSwishes)
-                |> registerClip "footstep" 0.15 False False footsteps
+                |> registerClip "footstep" 1 False False footsteps
             )
         |> ECS.set spritesheet_
             (makeSpritesheet "/assets/img/e-swordsman-spritesheet.png" "idle"

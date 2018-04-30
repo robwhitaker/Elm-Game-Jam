@@ -123,7 +123,7 @@ update msg state =
             let newLoader = Resource.updateLoader loaderMsg state.resourceLoader
             in
                 if newLoader.pending <= 0
-                    then (Init.entities { state | resourceLoader = newLoader, gameState = Start }, Cmd.none)
+                    then (Init.entities True { state | resourceLoader = newLoader, gameState = Start }, Cmd.none)
                     else ({ state | resourceLoader = newLoader }, Cmd.none)
 
         AudioEvent e ->
@@ -143,7 +143,7 @@ update msg state =
                     ))) state, Cmd.none)
 
         NewGame ->
-            ( Init.entities { state | wave = 0, gameState = WaveTransition 5, enemySpawner = EnemySpawner.newWave 1 state.enemySpawner }
+            ( Init.entities False { state | wave = 0, gameState = WaveTransition 5, enemySpawner = EnemySpawner.newWave 1 state.enemySpawner }
             , Cmd.none
             )
 

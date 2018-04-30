@@ -15,8 +15,8 @@ import Messages exposing (..)
 
 import Dict
 
-entities : State -> State
-entities state =
+entities : Bool -> State -> State
+entities startBgm state =
     { state | entities = Dict.empty, entitySimpleNames = Dict.empty }
         |> ECS.addEntityWithSimpleName (Just "player") ( noComponents
                         |> ECS.set playerController_ (PlayerController Idle)
@@ -29,7 +29,7 @@ entities state =
                         |> ECS.set audioPlayer_ (emptyAudioPlayer
                                 |> registerClip "gothit" 1 False False enemyHits
                                 |> registerClip "attack" 1 False False fastSwordSwishes
-                                |> registerClip "footstep" 0.35 False False footsteps
+                                |> registerClip "footstep" 1 False False footsteps
                             )
                         |> ECS.set spritesheet_
                             (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
@@ -78,6 +78,12 @@ entities state =
                                         ++ [[ Hitbox (Rect (0.05, 0.05) (0.45, 0.7)) (Hurtbox 1) ]]
                                     }
                                 ] state) )
+        |> ECS.addEntityWithSimpleName (Just "jukebox") (noComponents
+                |> ECS.set audioPlayer_ (emptyAudioPlayer
+                        |> registerClip "bgm" 0.5 True False [ bgm ]
+                        |> if startBgm then queueAudio "bgm" else identity
+                    )
+            )
 
 resources : (Resource.ResourceDB o, Cmd Msg) -> (Resource.ResourceDB o, Cmd Msg)
 resources =
@@ -89,4 +95,5 @@ resources =
             , Resource.loadTexture LoadResource "/assets/img/ground.png"
             , Resource.loadTexture LoadResource "/assets/img/player-spritesheet.png"
             , Resource.loadTexture LoadResource "/assets/img/e-swordsman-spritesheet.png"
+            , loadAudio bgm
             ] ++ List.map loadAudio allSounds

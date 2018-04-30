@@ -35,6 +35,9 @@ footsteps =
     , "/assets/sfx/footstep-5"
     ]
 
+bgm : String
+bgm = "/assets/bgm/heavymetalsticks"
+
 allSounds : List String
 allSounds =
     List.concat
