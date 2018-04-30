@@ -12,6 +12,14 @@ type AudioPlayer = AudioPlayer
     , clips : Dict String AudioClip
     }
 
+emptyAudioPlayer : AudioPlayer
+emptyAudioPlayer =
+    AudioPlayer
+        { playlist = Set.empty
+        , playing = Set.empty
+        , clips = Dict.empty
+        }
+
 type alias AudioClip =
     { resources : Array FilePath -- if more than one resource is provided, one can be picked randomly
     , volume : Float

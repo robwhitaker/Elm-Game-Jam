@@ -9,6 +9,7 @@ import ECS.Entity exposing (..)
 import ECS.Components.Simple exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import ECS.Components.Collision exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import Data.State exposing (System)
 import Utils.SelectionList as SL
 
@@ -55,26 +56,28 @@ collision dt =
                                                             in
                                                                 if Collision2D.axisAlignedBoundingBox pcRect ecRect
                                                                     then
-                                                                        let hpUpdater dmg mult maybeE =
-                                                                            case maybeE of
-                                                                                Nothing -> Nothing
-                                                                                Just e ->
-                                                                                    if Maybe.map (\(HP hp _) -> hp - (dmg * mult) <= 0) e.hp == Just True
-                                                                                        then Nothing
-                                                                                        else
-                                                                                            Just
-                                                                                                (ECS.update hp_
-                                                                                                    (Maybe.map (\(HP hp maxHP) -> HP (hp - (dmg * mult)) maxHP))
-                                                                                                    e
-                                                                                                    )
+                                                                        let playHurtSound =
+                                                                                ECS.update audioPlayer_ (Maybe.map (queueAudio "gothit"))
+                                                                            hpUpdater dmg mult maybeE =
+                                                                                case maybeE of
+                                                                                    Nothing -> Nothing
+                                                                                    Just e ->
+                                                                                        if Maybe.map (\(HP hp _) -> hp - (dmg * mult) <= 0) e.hp == Just True
+                                                                                            then Nothing
+                                                                                            else
+                                                                                                Just
+                                                                                                    (ECS.update hp_
+                                                                                                        (Maybe.map (\(HP hp maxHP) -> HP (hp - (dmg * mult)) maxHP))
+                                                                                                        e
+                                                                                                        )
                                                                         in
                                                                             case (getHitboxType phbox, getHitboxType ehbox) of
                                                                                 (Damagebox dmg, Hurtbox mult) ->
                                                                                     ( np
-                                                                                    , hpUpdater dmg mult ne
+                                                                                    , hpUpdater dmg mult ne |> Maybe.map playHurtSound
                                                                                     )
                                                                                 (Hurtbox mult, Damagebox dmg) ->
-                                                                                    ( hpUpdater dmg mult np
+                                                                                    ( hpUpdater dmg mult np |> Maybe.map playHurtSound
                                                                                     , ne
                                                                                     )
                                                                                 _ -> acc

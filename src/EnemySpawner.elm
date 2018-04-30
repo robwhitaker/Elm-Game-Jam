@@ -11,7 +11,9 @@ import ECS.Components.Simple exposing (..)
 import ECS.Components.Collision exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import ECS.Components.AIController exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import Data.State exposing (..)
+import Data.AudioConstants exposing (..)
 
 newWave : Int -> EnemySpawner -> EnemySpawner
 newWave wave spawner =
@@ -45,7 +47,7 @@ runSpawner dt state =
                     spawnLocationGen = Random.bool |> Random.map (\b -> if b then playerX-screenW/1.5 else playerX+screenW/1.5)
                     eSpawnPosGen x = Random.float (x - 150) (x + 150) |> Random.map (\newX -> Position (newX, baseHeight, 0.9))
                     eSpeedGen = Random.float 200 500
-                    eAtkSpeedGen = Random.float 0.35 1
+                    eAtkSpeedGen = Random.float 0.35 0.75
                     eAtkCDGen = Random.float 0.35 1
                     newEnemyListGen n x =
                         Random.list n <| Random.map4 (swordsman state) (eSpawnPosGen x) eSpeedGen eAtkSpeedGen eAtkCDGen
@@ -85,6 +87,11 @@ swordsman state pos moveSpeed attackSpeed attackCD =
         |> ECS.set speed_ (Speed moveSpeed)
         |> ECS.set collision_ (Collision Enemy)
         |> ECS.set attackCD_ (AttackCD 0 attackCD)
+        |> ECS.set audioPlayer_ (emptyAudioPlayer
+                |> registerClip "gothit" 1 False False playerHits
+                |> registerClip "attack" 1 False False (if attackSpeed <= 0.5 then fastSwordSwishes else slowSwordSwishes)
+                |> registerClip "footstep" 0.15 False False footsteps
+            )
         |> ECS.set spritesheet_
             (makeSpritesheet "/assets/img/e-swordsman-spritesheet.png" "idle"
                 [ { animationInit

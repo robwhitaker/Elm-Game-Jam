@@ -1,6 +1,7 @@
 module Init exposing (..)
 
 import Data.State exposing (..)
+import Data.AudioConstants exposing (..)
 import ECS
 import ECS.Entity exposing (..)
 import ECS.Components.Simple exposing (..)
@@ -8,10 +9,10 @@ import ECS.Components.Collision exposing (..)
 import ECS.Components.PlayerController exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import ECS.Components.AIController exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import Resource
 import Messages exposing (..)
 
-import Color
 import Dict
 
 entities : State -> State
@@ -25,6 +26,11 @@ entities state =
                         |> ECS.set hp_ (HP 25 25)
                         |> ECS.set speed_ (Speed 750)
                         |> ECS.set collision_ (Collision Player)
+                        |> ECS.set audioPlayer_ (emptyAudioPlayer
+                                |> registerClip "gothit" 1 False False enemyHits
+                                |> registerClip "attack" 1 False False fastSwordSwishes
+                                |> registerClip "footstep" 0.35 False False footsteps
+                            )
                         |> ECS.set spritesheet_
                             (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
                                 [ { animationInit
@@ -75,10 +81,12 @@ entities state =
 
 resources : (Resource.ResourceDB o, Cmd Msg) -> (Resource.ResourceDB o, Cmd Msg)
 resources =
-    Resource.initLoader
-        [ Resource.loadTexture LoadResource "/assets/img/cloud-bg.png"
-        , Resource.loadTexture LoadResource "/assets/img/terrible-trees.png"
-        , Resource.loadTexture LoadResource "/assets/img/ground.png"
-        , Resource.loadTexture LoadResource "/assets/img/player-spritesheet.png"
-        , Resource.loadTexture LoadResource "/assets/img/e-swordsman-spritesheet.png"
-        ]
+    let loadAudio = Resource.loadAudio ["ogg", "m4a"]
+    in
+        Resource.initLoader <|
+            [ Resource.loadTexture LoadResource "/assets/img/cloud-bg.png"
+            , Resource.loadTexture LoadResource "/assets/img/terrible-trees.png"
+            , Resource.loadTexture LoadResource "/assets/img/ground.png"
+            , Resource.loadTexture LoadResource "/assets/img/player-spritesheet.png"
+            , Resource.loadTexture LoadResource "/assets/img/e-swordsman-spritesheet.png"
+            ] ++ List.map loadAudio allSounds

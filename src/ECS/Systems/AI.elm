@@ -6,6 +6,7 @@ import ECS.Components.Simple exposing (..)
 import ECS.Components.PlayerController exposing (..)
 import ECS.Components.Spritesheet exposing (..)
 import ECS.Components.AIController exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import Data.State exposing (System, State)
 import KeyboardInput exposing (..)
 
@@ -46,30 +47,35 @@ swordsmanAI dt state entity =
                         in
                             getRunningAnimation eSpritesheet
                                 |> Maybe.andThen (\ra ->
-                                    (\e -> Just (state, Just e, Cmd.none))
-                                        <| if abs (px - ex) > 75 && ra.name /= "attack"
-                                            then
-                                                entity
-                                                    |> ECS.update physics_ (Maybe.map (\(Physics (vx, vy) g) ->
-                                                            Physics (turn dirShouldBe moveSpeed, vy) g
-                                                        ))
-                                                    |> ECS.set direction_ dirShouldBe
-                                                    |> ECS.set attackCD_ (AttackCD cdLeft maxCD)
-                                                    |> ECS.update spritesheet_ (Maybe.map (loadRunningAnimation "running"))
-                                            else if ra.name /= "attack" && cdLeft <= 0
-                                                then entity
-                                                    |> ECS.update physics_ (Maybe.map (\(Physics (vx, vy) g) ->
-                                                            Physics (0, vy) g
-                                                        ))
-                                                    |> ECS.set direction_ dirShouldBe
-                                                    |> ECS.update spritesheet_ (Maybe.map (loadRunningAnimation "attack"))
-                                            else if ra.name == "attack" && ra.currentFrame == ra.currentAnimation.numberOfFrames - 1 && cdLeft <= 0
-                                                then ECS.set attackCD_ (AttackCD maxCD maxCD) entity
-                                            else
-                                                entity
-                                                    |> ECS.set attackCD_ (AttackCD cdLeft maxCD)
-
-
+                                    (\e -> Just (state, Just e, Cmd.none)) <|
+                                        let sfxEntity =
+                                            if ra.name == "running" && ra.currentFrame % 4 == 0
+                                                then ECS.update audioPlayer_ (Maybe.map (queueAudio "footstep")) entity
+                                                else entity
+                                        in
+                                            if abs (px - ex) > 75 && ra.name /= "attack"
+                                                then
+                                                    sfxEntity
+                                                        |> ECS.update physics_ (Maybe.map (\(Physics (vx, vy) g) ->
+                                                                Physics (turn dirShouldBe moveSpeed, vy) g
+                                                            ))
+                                                        |> ECS.set direction_ dirShouldBe
+                                                        |> ECS.set attackCD_ (AttackCD cdLeft maxCD)
+                                                        |> ECS.update spritesheet_ (Maybe.map (loadRunningAnimation "running"))
+                                                else if ra.name /= "attack" && cdLeft <= 0
+                                                    then sfxEntity
+                                                        |> ECS.update physics_ (Maybe.map (\(Physics (vx, vy) g) ->
+                                                                Physics (0, vy) g
+                                                            ))
+                                                        |> ECS.set direction_ dirShouldBe
+                                                        |> ECS.update spritesheet_ (Maybe.map (loadRunningAnimation "attack"))
+                                                else if ra.name == "attack" && ra.currentFrame >= 7 && ra.currentFrame < ra.currentAnimation.numberOfFrames - 1
+                                                    then ECS.update audioPlayer_ (Maybe.map (queueAudio "attack")) sfxEntity
+                                                else if ra.name == "attack" && ra.currentFrame == ra.currentAnimation.numberOfFrames - 1 && cdLeft <= 0
+                                                    then ECS.set attackCD_ (AttackCD maxCD maxCD) sfxEntity
+                                                else
+                                                    sfxEntity
+                                                        |> ECS.set attackCD_ (AttackCD cdLeft maxCD)
                                     )
                                 |> Maybe.withDefault (state, Nothing, Cmd.none)
                     )

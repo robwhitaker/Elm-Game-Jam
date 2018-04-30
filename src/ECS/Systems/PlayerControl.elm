@@ -5,6 +5,7 @@ import ECS.Entity exposing (..)
 import ECS.Components.Simple exposing (..)
 import ECS.Components.PlayerController exposing (..)
 import ECS.Components.Spritesheet exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import Data.State exposing (System, baseHeight)
 import KeyboardInput exposing (..)
 
@@ -118,6 +119,21 @@ playerControl dt =
                                                 Running -> "running"
                                         in
                                             loadRunningAnimation newAnim spritesheet )
+                                    |> (\player ->
+                                        player
+                                            |> ECS.with .spritesheet
+                                            |> ECS.processEntity (\(Spritesheet _ runningAnimation _) ->
+                                                case runningAnimation of
+                                                    Nothing -> player
+                                                    Just ra ->
+                                                        if ra.name == "attack" && ra.currentFrame >= 7
+                                                            then ECS.update audioPlayer_ (Maybe.map (queueAudio "attack")) player
+                                                        else if ra.name == "running" && ra.currentFrame % 4 == 0
+                                                            then ECS.update audioPlayer_ (Maybe.map (queueAudio "footstep")) player
+                                                        else
+                                                            player
+                                            ) |> Maybe.withDefault player
+                                    )
                                 )
                     ) |> (\e -> (state, e, Cmd.none))
         ) >> (\(s, c) ->

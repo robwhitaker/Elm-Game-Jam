@@ -17,7 +17,7 @@ audio _ =
         entity
             |> ECS.with .audioPlayer
             |> ECS.processEntity (\(AudioPlayer audioPlayer) ->
-                let (labels, cmds, randomSeed) =
+                let (labels, cmds, newSeed) =
                         Set.toList audioPlayer.playlist
                             |> List.foldl (\soundLabel (labels, cmds, randomSeed) ->
                                 Dict.get soundLabel audioPlayer.clips
@@ -49,7 +49,7 @@ audio _ =
                             ) ([], Cmd.none, state.randomSeed)
                     newPlaying = Set.fromList labels |> Set.union audioPlayer.playing
                 in
-                    (state
+                    ( { state | randomSeed = newSeed }
                     , ECS.set audioPlayer_
                         (AudioPlayer { audioPlayer
                             | playlist = Set.empty
