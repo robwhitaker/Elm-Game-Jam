@@ -7,6 +7,7 @@ import Color
 import Dict exposing (Dict)
 import Task
 import Random
+import Set
 
 import AnimationFrame
 import Window
@@ -16,12 +17,15 @@ import Game.TwoD.Camera as Camera
 import Data.State exposing (..)
 import Messages exposing (..)
 import ECS exposing (Id)
+import ECS.Entity exposing (..)
+import ECS.Components.AudioPlayer exposing (..)
 import ECS.Components.Simple exposing (Position(..))
 import ECS.Systems as Systems
 import Resource
 import KeyboardInput
 import Init
 import EnemySpawner
+import Ports
 
 main : Program Never State Msg
 main =
@@ -39,6 +43,9 @@ main =
             [ AnimationFrame.diffs ((\dt -> dt / 1000) >> Tick)
             , KeyboardInput.subs |> Sub.map KeyboardEvent
             , Window.resizes WindowResize
+            , Ports.audioLoaded (LoadResource << Resource.LoadAudio)
+            , Ports.audioEnded (AudioEvent << End)
+            , Ports.audioStopped (AudioEvent << Stop)
             ]
         }
 
@@ -60,6 +67,7 @@ update msg state =
                                 , Systems.collision
                                 , Systems.physics
                                 , Systems.animation
+                                , Systems.audio
                                 ]
                         player = ECS.getEntityBySimpleName "player" newState
                         (Position playerPos) =
@@ -111,12 +119,28 @@ update msg state =
         WindowResize size ->
             ({ state | windowSize = (size.width, size.height) }, Cmd.none)
 
-        LoadTexture loaderMsg ->
+        LoadResource loaderMsg ->
             let newLoader = Resource.updateLoader loaderMsg state.resourceLoader
             in
                 if newLoader.pending <= 0
                     then (Init.entities { state | resourceLoader = newLoader, gameState = Start }, Cmd.none)
                     else ({ state | resourceLoader = newLoader }, Cmd.none)
+
+        AudioEvent e ->
+            let (eid, label, noStopIfLooping) =
+                case e of
+                    End (eid, label) -> (eid, label, True)
+                    Stop (eid, label) -> (eid, label, False)
+            in
+                (ECS.updateEntityById eid
+                    (ECS.update audioPlayer_ (Maybe.map (\(AudioPlayer audioPlayer) ->
+                        case Dict.get label audioPlayer.clips of
+                            Nothing -> AudioPlayer audioPlayer
+                            Just clip ->
+                                if clip.loop && noStopIfLooping
+                                    then AudioPlayer audioPlayer
+                                    else AudioPlayer { audioPlayer | playing = Set.remove label audioPlayer.playing }
+                    ))) state, Cmd.none)
 
         NewGame ->
             ( Init.entities { state | wave = 0, gameState = WaveTransition 5, enemySpawner = EnemySpawner.newWave 1 state.enemySpawner }
@@ -124,7 +148,7 @@ update msg state =
             )
 
         RandomSeed seed ->
-            ({ state | enemySpawner = EnemySpawner.newWave state.wave <| EnemySpawner.updateSeed seed state.enemySpawner }
+            ({ state | randomSeed = seed }
             , Cmd.none
             )
 

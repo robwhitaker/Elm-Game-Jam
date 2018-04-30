@@ -4,6 +4,8 @@ import Dict exposing (Dict)
 import Task
 import WebGL.Texture as Texture exposing (Error, Texture)
 
+import Ports
+
 type alias FilePath = String
 
 type alias ResourceDB o =
@@ -17,7 +19,7 @@ type alias Loader =
     , total : Int
     }
 
-type LoaderMsg = LoadTexture (Result Error (FilePath, Texture))
+type LoaderMsg = LoadTexture (Result Error (FilePath, Texture)) | LoadAudio FilePath
 
 updateLoader : LoaderMsg -> Loader -> Loader
 updateLoader msg loader =
@@ -34,6 +36,10 @@ updateLoader msg loader =
                             | textureDB = Dict.insert filePath tex loader.textureDB
                             , pending = loader.pending - 1
                         }
+        LoadAudio filePath ->
+            let a = Debug.log "loadedResource" filePath
+            in
+                { loader | pending = loader.pending - 1 }
 
 loader : Loader
 loader =
@@ -56,10 +62,12 @@ loadTexture mkCmd filePath = Task.attempt (mkCmd << LoadTexture) <| (Texture.loa
         Task.succeed (filePath, texture)
     ))
 
+loadAudio : List String -> FilePath -> Cmd msg
+loadAudio extensions filePath = Ports.loadAudio (filePath, extensions)
+
 saveTexture : (FilePath, Texture) -> Loader -> Loader
 saveTexture (filePath, tex) loader =
     { loader | textureDB = Dict.insert filePath tex loader.textureDB  }
-
 
 getTexture : FilePath -> ResourceDB o -> Maybe Texture
 getTexture filePath db =

@@ -12,7 +12,11 @@ type Msg
     | Tick Time
     | KeyboardEvent KeyboardEvent
     | WindowResize Size
-    | LoadTexture Resource.LoaderMsg
+    | LoadResource Resource.LoaderMsg
     | RandomSeed Seed
     | NewGame
+    | AudioEvent AudioEvent
 
+type AudioEvent
+    = End (Int, String)
+    | Stop (Int, String)

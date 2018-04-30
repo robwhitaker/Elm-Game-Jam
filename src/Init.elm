@@ -76,9 +76,9 @@ entities state =
 resources : (Resource.ResourceDB o, Cmd Msg) -> (Resource.ResourceDB o, Cmd Msg)
 resources =
     Resource.initLoader
-        [ Resource.loadTexture LoadTexture "/assets/img/cloud-bg.png"
-        , Resource.loadTexture LoadTexture "/assets/img/terrible-trees.png"
-        , Resource.loadTexture LoadTexture "/assets/img/ground.png"
-        , Resource.loadTexture LoadTexture "/assets/img/player-spritesheet.png"
-        , Resource.loadTexture LoadTexture "/assets/img/e-swordsman-spritesheet.png"
+        [ Resource.loadTexture LoadResource "/assets/img/cloud-bg.png"
+        , Resource.loadTexture LoadResource "/assets/img/terrible-trees.png"
+        , Resource.loadTexture LoadResource "/assets/img/ground.png"
+        , Resource.loadTexture LoadResource "/assets/img/player-spritesheet.png"
+        , Resource.loadTexture LoadResource "/assets/img/e-swordsman-spritesheet.png"
         ]

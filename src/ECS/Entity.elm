@@ -6,6 +6,7 @@ import ECS.Components.Collision exposing (Collision)
 import ECS.Components.Spritesheet exposing (Spritesheet)
 import ECS.Components.PlayerController exposing (PlayerController)
 import ECS.Components.AIController exposing (AIController)
+import ECS.Components.AudioPlayer exposing (AudioPlayer)
 
 type alias Updater a = ECS.Updater a Entity
 
@@ -21,6 +22,7 @@ type alias Entity =
     , aiController : Maybe AIController
     , attackCD : Maybe AttackCD
     , speed : Maybe Speed
+    , audioPlayer : Maybe AudioPlayer
     }
 
 noComponents : Entity
@@ -36,6 +38,7 @@ noComponents =
     , aiController = Nothing
     , attackCD = Nothing
     , speed = Nothing
+    , audioPlayer = Nothing
     }
 
 ---- UPDATER FUNCTIONS ----
@@ -72,3 +75,6 @@ attackCD_ f cSet = { cSet | attackCD = f cSet.attackCD }
 
 speed_ : Updater Speed
 speed_ f cSet = { cSet | speed = f cSet.speed }
+
+audioPlayer_ : Updater AudioPlayer
+audioPlayer_ f cSet = { cSet | audioPlayer = f cSet.audioPlayer }

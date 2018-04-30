@@ -28,6 +28,7 @@ type alias Model =
         , gameState : GameState
         , wave : Int
         , enemySpawner : EnemySpawner
+        , randomSeed : Seed
         }
 
 type GameState
@@ -42,7 +43,6 @@ type alias EnemySpawner =
     , enemiesOnScreen : Int
     , maxOnScreen : Int
     , spawnCD : Time
-    , randomSeed : Seed
     }
 
 emptySpawner : EnemySpawner
@@ -51,7 +51,6 @@ emptySpawner =
     , enemiesOnScreen = 0
     , maxOnScreen = 0
     , spawnCD = 0
-    , randomSeed = Random.initialSeed 0
     }
 
 empty : State
@@ -66,6 +65,7 @@ empty =
     , wave = 0
     , enemySpawner = emptySpawner
     , gameState = Loading
+    , randomSeed = Random.initialSeed 0
     }
 
 -- magic number for baseline height

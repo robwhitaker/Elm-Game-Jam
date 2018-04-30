@@ -1,4 +1,4 @@
-module EnemySpawner exposing (newWave, updateSeed, runSpawner, getEnemiesOnScreen, getTotalRemainingEnemies)
+module EnemySpawner exposing (newWave, runSpawner, getEnemiesOnScreen, getTotalRemainingEnemies)
 
 import Random exposing (Seed)
 import Time exposing (Time)
@@ -22,10 +22,6 @@ newWave wave spawner =
             | enemiesRemaining = baseline + ceiling (toFloat wave * 0.5 * toFloat baseline)
             , maxOnScreen = onScreen + ceiling (toFloat wave * 0.3 * toFloat onScreen)
         }
-
-updateSeed : Seed -> EnemySpawner -> EnemySpawner
-updateSeed seed spawner =
-    { spawner | randomSeed = seed }
 
 getEnemiesOnScreen : State -> Int
 getEnemiesOnScreen = List.length << List.filterMap (ECS.with .aiController) << Dict.values << .entities
@@ -61,12 +57,14 @@ runSpawner dt state =
                             |> Random.map (\cd ->
                                 (newEnemies, spawnN, cd)
                             ))))
-                    ((newEnemies, spawnN, cd), newSeed) = Random.step enemyGen state.enemySpawner.randomSeed
+                    ((newEnemies, spawnN, cd), newSeed) = Random.step enemyGen state.randomSeed
                     spawner = state.enemySpawner
                 in
                     List.foldl ECS.addEntity
-                        { state | enemySpawner =
-                            { spawner | enemiesRemaining = spawner.enemiesRemaining - spawnN, spawnCD = cd, randomSeed = newSeed } }
+                        { state
+                            | enemySpawner = { spawner | enemiesRemaining = spawner.enemiesRemaining - spawnN, spawnCD = cd }
+                            , randomSeed = newSeed
+                        }
                         newEnemies
             else
                 { state

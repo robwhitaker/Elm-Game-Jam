@@ -3,12 +3,54 @@
 	<head>
 		<meta charset="UTF-8">
 		<title>Of Sticks and Swords</title>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.0.9/howler.min.js"></script>
 		<script type="text/javascript" src="/build/game.js"></script>
 		<link rel="stylesheet" type="text/css" href="style.css">
 	</head>
 	<body>
 		<script>
 			var game = Elm.Main.fullscreen();
+			var audioDB = {};
+			var playDB = {};
+
+			function toKey(ownerId, label) {
+				return ownerId + "-" + label;
+			}
+
+			game.ports.loadAudio.subscribe(function(audioSource) {
+				audioDB[audioSource[0]] = new Howl({
+					src: audioSource[1].map(function(ext) { return audioSource[0] + "." + ext; })
+				});
+
+				audioDB[audioSource[0]].on("load", function() {
+					game.ports.audioLoaded.send(audioSource[0]);
+				});
+			});
+
+			game.ports.playAudio.subscribe(function(audioPlayEvent) {
+				var audio = audioDB[audioPlayEvent.resource];
+				var audioId = audio.play();
+				audio.volume(audioPlayEvent.volume, audioId);
+				audio.loop(audioPlayEvent.loop, audioId);
+
+				playDB[toKey(audioPlayEvent.ownerId, audioPlayEvent.label)] =
+					{ id : audioId
+					, soundKey : audioPlayEvent.resource
+					};
+
+				audio.on("end", function() {
+					game.ports.audioEnded.send([audioPlayEvent.ownerId, audioPlayEvent.label]);
+				}, audioId);
+
+				audio.on("stop", function() {
+					game.ports.audioStopped.send([audioPlayEvent.ownerId, audioPlayEvent.label]);
+				}, audioId);
+			});
+
+			game.ports.stopAudio.subscribe(function(audioStopEvent) {
+				var playData = playDB[toKey(audioStopEvent.ownerId, audioStopEvent.label)];
+				audioDB[playData.soundKey].stop(playData.id);
+			});
 		</script>
 	</body>
 </html>
