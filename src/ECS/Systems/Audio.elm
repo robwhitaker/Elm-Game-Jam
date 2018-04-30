@@ -25,7 +25,7 @@ audio _ =
                                         if Set.member soundLabel audioPlayer.playing && not audioClip.retrigger
                                             then Nothing
                                             else
-                                                let randSoundGen = Random.map (flip Array.get audioClip.resources) <| Random.int 0 (Array.length audioClip.resources)
+                                                let randSoundGen = Random.map (flip Array.get audioClip.resources) <| Random.int 0 (Array.length audioClip.resources - 1)
                                                 in
                                                     Random.step randSoundGen randomSeed
                                                         |> (\(maybeSound, newSeed) -> maybeSound
@@ -39,10 +39,6 @@ audio _ =
                                                                         , resource = sound
                                                                         , volume = audioClip.volume
                                                                         , loop = audioClip.loop
-                                                                        }
-                                                                    , Ports.stopAudio
-                                                                        { ownerId = id
-                                                                        , label = soundLabel
                                                                         }
                                                                     , cmds
                                                                     ]
