@@ -22,18 +22,18 @@ render model =
     << (++)
         [ Render.parallaxScroll
             { z = -0.99
-            , texture = Resource.getTexture "/assets/img/cloud-bg.png" model
+            , texture = Resource.getTexture "assets/img/cloud-bg.png" model
             , tileWH = (1,1)
             , scrollSpeed = (0.005, 0.005)
             }
         , Render.parallaxScroll
             { z = -0.98
-            , texture = Resource.getTexture "/assets/img/terrible-trees.png" model
+            , texture = Resource.getTexture "assets/img/terrible-trees.png" model
             , tileWH = (1,1)
             , scrollSpeed = (0.01, 0.01)
             }
         , Render.spriteWithOptions
-            { texture = Resource.getTexture "/assets/img/ground.png" model
+            { texture = Resource.getTexture "assets/img/ground.png" model
             , position = (-5000, -975, 0)
             , size = (10000, 1000)
             , tiling = (20, 1)

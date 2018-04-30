@@ -93,7 +93,7 @@ swordsman state pos moveSpeed attackSpeed attackCD =
                 |> registerClip "footstep" 1 False False footsteps
             )
         |> ECS.set spritesheet_
-            (makeSpritesheet "/assets/img/e-swordsman-spritesheet.png" "idle"
+            (makeSpritesheet "assets/img/e-swordsman-spritesheet.png" "idle"
                 [ { animationInit
                     | name = "idle"
                     , stripDimensions = (1975, 154)

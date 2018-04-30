@@ -32,7 +32,7 @@ entities startBgm state =
                                 |> registerClip "footstep" 1 False False footsteps
                             )
                         |> ECS.set spritesheet_
-                            (makeSpritesheet "/assets/img/player-spritesheet.png" "idle"
+                            (makeSpritesheet "assets/img/player-spritesheet.png" "idle"
                                 [ { animationInit
                                     | name = "idle"
                                     , stripDimensions = (1975, 154)
@@ -90,10 +90,10 @@ resources =
     let loadAudio = Resource.loadAudio ["ogg", "m4a"]
     in
         Resource.initLoader <|
-            [ Resource.loadTexture LoadResource "/assets/img/cloud-bg.png"
-            , Resource.loadTexture LoadResource "/assets/img/terrible-trees.png"
-            , Resource.loadTexture LoadResource "/assets/img/ground.png"
-            , Resource.loadTexture LoadResource "/assets/img/player-spritesheet.png"
-            , Resource.loadTexture LoadResource "/assets/img/e-swordsman-spritesheet.png"
+            [ Resource.loadTexture LoadResource "assets/img/cloud-bg.png"
+            , Resource.loadTexture LoadResource "assets/img/terrible-trees.png"
+            , Resource.loadTexture LoadResource "assets/img/ground.png"
+            , Resource.loadTexture LoadResource "assets/img/player-spritesheet.png"
+            , Resource.loadTexture LoadResource "assets/img/e-swordsman-spritesheet.png"
             , loadAudio bgm
             ] ++ List.map loadAudio allSounds
